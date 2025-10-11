@@ -7,13 +7,10 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 interface GeoChartData {
   region: string
   count: number
+  [key: string]: string | number
 }
 
 export function GeoChart({ data }: { data: GeoChartData[] }) {
-  const renderLabel = ({ region, percent }: { region: string; percent: number }) => {
-    return `${region}: ${(percent * 100).toFixed(0)}%`
-  }
-
   return (
     <ResponsiveContainer width="100%" height={300}>
       <PieChart>
@@ -22,7 +19,10 @@ export function GeoChart({ data }: { data: GeoChartData[] }) {
           cx="50%"
           cy="50%"
           labelLine={false}
-          label={renderLabel}
+          label={(props) => {
+            const payload = props as unknown as { region: string; percent: number }
+            return `${payload.region}: ${(payload.percent * 100).toFixed(0)}%`
+          }}
           outerRadius={80}
           fill="#8884d8"
           dataKey="count"
