@@ -10,35 +10,30 @@ async function createProduct(formData: FormData) {
   
   const { adminClient } = await requireAdmin()
   
+  const name = formData.get('name') as string
+  const description = formData.get('description') as string
+  const price = parseFloat(formData.get('price') as string)
+  const duration = parseInt(formData.get('license_duration_days') as string)
+  const maxAccounts = parseInt(formData.get('max_accounts') as string)
+
   try {
-    const name = formData.get('name') as string
-    const description = formData.get('description') as string
-    const price = parseFloat(formData.get('price') as string)
-    const duration = parseInt(formData.get('duration') as string)
-    const maxAccounts = parseInt(formData.get('max_accounts') as string)
+    const { error } = await adminClient
+      .from('products')
+      .insert({
+        name,
+        description,
+        price,
+        license_duration_days: duration,
+        max_accounts: maxAccounts,
+      })
 
-    if (!name || !price || !duration || !maxAccounts) {
-      redirect('/admin/products?error=All fields are required')
-    }
-
-    const { error } = await adminClient.from('products').insert({
-      name,
-      description,
-      price,
-      license_duration_days: duration,
-      max_accounts: maxAccounts,
-    })
-
-    if (error) {
-      console.error('Product creation error:', error)
-      redirect('/admin/products?error=' + encodeURIComponent(error.message))
-    }
-
+    if (error) throw error
+    
     revalidatePath('/admin/products')
-    redirect('/admin/products?success=Product created successfully')
+    return redirect('/admin/products?success=' + encodeURIComponent('Product created successfully'))
   } catch (error) {
-    console.error('Unexpected error:', error)
-    redirect('/admin/products?error=Failed to create product')
+    revalidatePath('/admin/products')
+    return redirect('/admin/products?error=' + encodeURIComponent('Failed to create product'))
   }
 }
 

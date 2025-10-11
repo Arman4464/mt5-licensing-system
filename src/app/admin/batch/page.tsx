@@ -12,6 +12,7 @@ async function batchExtendLicenses(formData: FormData) {
   
   const days = parseInt(formData.get('days') as string)
   const status = formData.get('status') as string
+  const reactivate = formData.get('reactivate') === 'true'
 
   if (!days || !status) {
     redirect('/admin/batch?error=Days and status required')
@@ -19,7 +20,7 @@ async function batchExtendLicenses(formData: FormData) {
 
   const { data: licenses } = await adminClient
     .from('licenses')
-    .select('id, expires_at')
+    .select('id, expires_at, status')
     .eq('status', status)
 
   if (!licenses || licenses.length === 0) {
@@ -31,16 +32,23 @@ async function batchExtendLicenses(formData: FormData) {
     const newExpiry = new Date(currentExpiry)
     newExpiry.setDate(newExpiry.getDate() + days)
     
+    const updateData: any = { expires_at: newExpiry.toISOString() }
+    
+    // If reactivating, change status to active
+    if (reactivate && (license.status === 'suspended' || license.status === 'expired')) {
+      updateData.status = 'active'
+    }
+    
     return adminClient
       .from('licenses')
-      .update({ expires_at: newExpiry.toISOString() })
+      .update(updateData)
       .eq('id', license.id)
   })
 
   await Promise.all(updates)
 
   revalidatePath('/admin/batch')
-  redirect(`/admin/batch?success=Extended ${licenses.length} licenses by ${days} days`)
+  redirect(`/admin/batch?success=Extended ${licenses.length} licenses by ${days} days${reactivate ? ' and reactivated' : ''}`)
 }
 
 async function batchSuspendExpired() {
@@ -148,44 +156,50 @@ export default async function BatchOperationsPage() {
         <div className="mb-6 rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">🔄 Batch Extend Licenses</h2>
           <form action={batchExtendLicenses} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  License Status
-                </label>
-                <select
-                  name="status"
-                  required
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2"
-                >
-                  <option value="active">Active</option>
-                  <option value="suspended">Suspended</option>
-                  <option value="expired">Expired</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Extend by (days)
-                </label>
-                <input
-                  type="number"
-                  name="days"
-                  required
-                  min="1"
-                  defaultValue="30"
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2"
-                />
-              </div>
-              <div className="flex items-end">
-                <button
-                  type="submit"
-                  className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                  Extend All
-                </button>
-              </div>
-            </div>
-          </form>
+  <div className="grid gap-4 md:grid-cols-4">
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        License Status
+      </label>
+      <select
+        name="status"
+        required
+        className="block w-full rounded-md border border-gray-300 px-3 py-2"
+      >
+        <option value="active">Active</option>
+        <option value="suspended">Suspended</option>
+        <option value="expired">Expired</option>
+      </select>
+    </div>
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Extend by (days)
+      </label>
+      <input
+        type="number"
+        name="days"
+        required
+        min="1"
+        defaultValue="30"
+        className="block w-full rounded-md border border-gray-300 px-3 py-2"
+      />
+    </div>
+    <div className="flex items-end">
+      <label className="flex items-center gap-2">
+        <input type="checkbox" name="reactivate" value="true" className="rounded" />
+        <span className="text-sm text-gray-700">Reactivate License</span>
+      </label>
+    </div>
+    <div className="flex items-end">
+      <button
+        type="submit"
+        className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+      >
+        Extend All
+      </button>
+    </div>
+  </div>
+</form>
         </div>
 
         {/* Batch Suspend Expired */}

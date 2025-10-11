@@ -22,7 +22,7 @@ export async function sendLicenseCreatedEmail(
     )
 
     const { data, error } = await resend.emails.send({
-      from: 'Mark8Pips <noreply@mark8pips.com>',
+      from: 'Mark8Pips <onboarding@resend.dev>',
       to: userEmail,
       subject: `🎉 Your ${productName} License is Ready!`,
       html: emailHtml,
@@ -58,7 +58,7 @@ export async function sendLicenseExpiringEmail(
     )
 
     const { data, error } = await resend.emails.send({
-      from: 'Mark8Pips <noreply@mark8pips.com>',
+      from: 'Mark8Pips <onboarding@resend.dev>',
       to: userEmail,
       subject: `⚠️ Your ${productName} License Expires in ${daysRemaining} Days`,
       html: emailHtml,
@@ -84,7 +84,7 @@ export async function sendLicenseExpiredEmail(
 ) {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Mark8Pips <noreply@mark8pips.com>',
+      from: 'Mark8Pips <onboarding@resend.dev>',
       to: userEmail,
       subject: `❌ Your ${productName} License Has Expired`,
       html: `
@@ -122,7 +122,7 @@ export async function sendNewAccountAlert(
 ) {
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Mark8Pips System <alerts@mark8pips.com>',
+      from: 'Mark8Pips System <onboarding@resend.dev>',
       to: adminEmail,
       subject: `🔔 New MT5 Account Registered - ${accountNumber}`,
       html: `
