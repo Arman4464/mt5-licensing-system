@@ -87,11 +87,15 @@ export default async function SecurityPage() {
     .from('mt5_accounts')
     .select('license_id, ip_address, licenses(license_key)')
 
-  // Group IPs by license - simplified approach
+  // Group IPs by license - using explicit any to bypass type checking
   const ipsByLicense: Record<string, { license_key: string; ips: string[] }> = {}
   
   if (suspiciousActivity && Array.isArray(suspiciousActivity)) {
-    for (const account of suspiciousActivity) {
+    for (const account of suspiciousActivity as Array<{
+      license_id: string
+      ip_address: string
+      licenses: { license_key: string } | Array<{ license_key: string }> | null
+    }>) {
       const licenseId = account.license_id
       let licenseKey = ''
       
@@ -252,12 +256,14 @@ export default async function SecurityPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {whitelist.map((item) => {
+                    const itemLicenses = item.licenses as { license_key: string } | Array<{ license_key: string }> | null
                     let licenseKey = ''
-                    if (item.licenses) {
-                      if (Array.isArray(item.licenses)) {
-                        licenseKey = item.licenses.length > 0 ? item.licenses[0].license_key : ''
+                    
+                    if (itemLicenses) {
+                      if (Array.isArray(itemLicenses)) {
+                        licenseKey = itemLicenses.length > 0 ? itemLicenses[0].license_key : ''
                       } else {
-                        licenseKey = item.licenses.license_key || ''
+                        licenseKey = itemLicenses.license_key || ''
                       }
                     }
                     
