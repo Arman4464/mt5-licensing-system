@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimit } from '@/lib/rate-limit'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -24,6 +25,25 @@ export async function POST(request: Request) {
       account_name = 'unknown', 
       broker_company = 'unknown'
     } = body
+
+    // Rate limiting by IP
+    const clientIP = ip_address || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    if (!rateLimit(clientIP, 30, 60000)) {
+      console.warn('Rate limit exceeded for IP:', clientIP)
+      return NextResponse.json(
+        { valid: false, message: 'Rate limit exceeded. Try again in 1 minute.' },
+        { status: 429 }
+      )
+    }
+
+    // Rate limiting by license key
+    if (license_key && !rateLimit(`license:${license_key}`, 100, 60000)) {
+      console.warn('Rate limit exceeded for license:', license_key)
+      return NextResponse.json(
+        { valid: false, message: 'Too many validation requests for this license.' },
+        { status: 429 }
+      )
+    }
 
     if (!license_key || !account_number) {
       return NextResponse.json(
@@ -52,6 +72,24 @@ export async function POST(request: Request) {
         { valid: false, message: 'License not found' },
         { status: 404 }
       )
+    }
+
+    // Check IP whitelist
+    const { data: whitelist } = await supabase
+      .from('ip_whitelist')
+      .select('*')
+      .eq('license_id', license.id)
+      .eq('is_active', true)
+
+    if (whitelist && whitelist.length > 0) {
+      const isWhitelisted = whitelist.some(w => w.ip_address === clientIP)
+      if (!isWhitelisted) {
+        console.warn('IP not whitelisted:', clientIP, 'for license:', license_key)
+        return NextResponse.json(
+          { valid: false, message: 'IP address not authorized for this license' },
+          { status: 403 }
+        )
+      }
     }
 
     // Check status
@@ -113,7 +151,7 @@ export async function POST(request: Request) {
           account_name,
           broker_server,
           broker_company,
-          ip_address,
+          ip_address: clientIP,
           last_used_at: new Date().toISOString(),
         })
         .select('id')
@@ -130,7 +168,7 @@ export async function POST(request: Request) {
         .from('mt5_accounts')
         .update({
           last_used_at: new Date().toISOString(),
-          ip_address,
+          ip_address: clientIP,
         })
         .eq('id', accountExists.id)
     }
@@ -140,7 +178,7 @@ export async function POST(request: Request) {
       license_id: license.id,
       mt5_account_id: mt5AccountId,
       event_type: 'validation',
-      ip_address,
+      ip_address: clientIP,
       metadata: {
         account_number,
         broker_server,
@@ -155,7 +193,7 @@ export async function POST(request: Request) {
 
     const product = Array.isArray(license.products) ? license.products[0] : license.products
 
-    console.log('Validation successful:', { license_key, accounts_used: accountsUsed })
+    console.log('✅ Validation successful:', { license_key, accounts_used: accountsUsed })
 
     return NextResponse.json({
       valid: true,
@@ -174,7 +212,7 @@ export async function POST(request: Request) {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Validation error:', errorMessage)
+    console.error('❌ Validation error:', errorMessage)
     return NextResponse.json(
       { valid: false, message: 'Server error: ' + errorMessage },
       { status: 500 }

@@ -7,12 +7,14 @@ export function AdminNav({ userEmail }: { userEmail: string }) {
   const pathname = usePathname()
 
   const navigation = [
-    { name: 'Dashboard', href: '/admin', icon: '📊' },
-    { name: 'Licenses', href: '/admin/licenses', icon: '🔑' },
-    { name: 'Products', href: '/admin/products', icon: '📦' },
-    { name: 'Customers', href: '/admin/users', icon: '👥' },
-    { name: 'Analytics', href: '/admin/analytics', icon: '📈' },
-  ]
+  { name: 'Dashboard', href: '/admin', icon: '📊' },
+  { name: 'Licenses', href: '/admin/licenses', icon: '🔑' },
+  { name: 'Products', href: '/admin/products', icon: '📦' },
+  { name: 'Customers', href: '/admin/users', icon: '👥' },
+  { name: 'Analytics', href: '/admin/analytics', icon: '📈' },
+  { name: 'Security', href: '/admin/security', icon: '🔐' },
+  { name: 'Batch Ops', href: '/admin/batch', icon: '⚙️' },
+]
 
   return (
     <nav className="border-b border-gray-200 bg-white shadow-sm">
