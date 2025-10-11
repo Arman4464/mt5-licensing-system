@@ -21,7 +21,6 @@ async function generateLicense(formData: FormData) {
     redirect('/admin/licenses?error=Product not found')
   }
 
-  // Generate license key
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   const licenseKey = Array.from({ length: 4 }, () => {
     return Array.from({ length: 8 }, () => 
@@ -32,7 +31,6 @@ async function generateLicense(formData: FormData) {
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + (durationDays || product.license_duration_days))
 
-  // Find or create user
   const { data: existingUser } = await supabase
     .from('users')
     .select('id')
@@ -220,7 +218,7 @@ export default async function LicensesPage() {
                 ) : (
                   <tr>
                     <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                      No licenses yet. Generate one above!
+                      No licenses yet. Create a product first, then generate licenses!
                     </td>
                   </tr>
                 )}
