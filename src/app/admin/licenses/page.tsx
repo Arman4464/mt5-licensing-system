@@ -118,9 +118,10 @@ async function generateLicense(formData: FormData) {
 
     revalidatePath('/admin/licenses')
     redirect('/admin/licenses?success=License generated successfully: ' + licenseKey)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     console.error('Unexpected error in generateLicense:', error)
-    redirect('/admin/licenses?error=System error: ' + encodeURIComponent(error?.message || 'Unknown error'))
+    redirect('/admin/licenses?error=System error: ' + encodeURIComponent(errorMessage))
   }
 }
 
