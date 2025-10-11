@@ -68,6 +68,16 @@ async function toggleIPStatus(formData: FormData) {
   redirect('/admin/security?success=IP status updated')
 }
 
+interface LicenseData {
+  license_key: string
+}
+
+interface AccountData {
+  license_id: string
+  ip_address: string
+  licenses: LicenseData | null
+}
+
 export default async function SecurityPage() {
   const { user, adminClient } = await requireAdmin()
 
@@ -82,21 +92,20 @@ export default async function SecurityPage() {
     .eq('status', 'active')
     .order('license_key', { ascending: true })
 
-  // Get suspicious activity (multiple IPs for same license)
   const { data: suspiciousActivity } = await adminClient
     .from('mt5_accounts')
     .select('license_id, ip_address, licenses(license_key)')
 
-  const ipsByLicense = suspiciousActivity?.reduce((acc: any, account) => {
+  const ipsByLicense = (suspiciousActivity as AccountData[] || []).reduce((acc: Record<string, { license_key: string; ips: Set<string> }>, account) => {
     const key = account.license_id
-    if (!acc[key]) acc[key] = { license_key: account.licenses?.license_key, ips: new Set() }
+    if (!acc[key]) acc[key] = { license_key: account.licenses?.license_key || '', ips: new Set() }
     acc[key].ips.add(account.ip_address)
     return acc
   }, {})
 
-  const suspicious = Object.entries(ipsByLicense || {})
-    .filter(([_, data]: any) => data.ips.size > 3)
-    .map(([licenseId, data]: any) => ({
+  const suspicious = Object.entries(ipsByLicense)
+    .filter(([, data]) => data.ips.size > 3)
+    .map(([licenseId, data]) => ({
       licenseId,
       license_key: data.license_key,
       ipCount: data.ips.size,

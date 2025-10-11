@@ -11,9 +11,7 @@ export async function POST(request: Request) {
     const paymentStatus = formData.get('status')
     const paymentId = formData.get('payment_id') as string
     const paymentRequestId = formData.get('payment_request_id') as string
-    const amount = parseFloat(formData.get('amount') as string)
     const buyerEmail = formData.get('buyer_email') as string
-    const buyerName = formData.get('buyer_name') as string
 
     console.log('Webhook received:', { paymentStatus, paymentId, paymentRequestId })
 
@@ -24,7 +22,6 @@ export async function POST(request: Request) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Find order by payment_request_id
     const { data: order } = await supabase
       .from('orders')
       .select('*, products(*), users(id)')
@@ -36,13 +33,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    // Check if already processed
     if (order.status === 'completed') {
       console.log('Order already processed:', order.id)
       return NextResponse.json({ message: 'Already processed' })
     }
 
-    // Generate license key
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     const licenseKey = Array.from({ length: 4 }, () => {
       return Array.from({ length: 8 }, () =>
@@ -53,7 +48,6 @@ export async function POST(request: Request) {
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + order.products.license_duration_days)
 
-    // Create license
     const { data: license, error: licenseError } = await supabase
       .from('licenses')
       .insert({
@@ -71,7 +65,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'License creation failed' }, { status: 500 })
     }
 
-    // Update order
     await supabase
       .from('orders')
       .update({
@@ -82,7 +75,6 @@ export async function POST(request: Request) {
       })
       .eq('id', order.id)
 
-    // Send license email
     try {
       await sendLicenseCreatedEmail(
         buyerEmail,
