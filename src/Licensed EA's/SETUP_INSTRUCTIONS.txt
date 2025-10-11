@@ -1,0 +1,126 @@
+=======================================================================
+MT5 EA LICENSING SYSTEM - COMPLETE SETUP GUIDE
+=======================================================================
+
+ADMIN PANEL ACCESS:
+URL: https://mark8pips.vercel.app/admin
+Email: [YOUR_EMAIL]
+Password: [YOUR_PASSWORD]
+
+=======================================================================
+HOW TO USE THE SYSTEM
+=======================================================================
+
+1. CREATE PRODUCTS:
+   - Go to: https://mark8pips.vercel.app/admin/products
+   - Click "Create New Product"
+   - Fill in:
+     * Product Name (e.g., "Scalping EA Pro")
+     * Price in USD
+     * License Duration (days)
+     * Max MT5 Accounts per license
+     * Description
+   - Click "Create Product"
+
+2. GENERATE LICENSES:
+   - Go to: https://mark8pips.vercel.app/admin/licenses
+   - Select Product
+   - Enter Customer Email
+   - Enter Duration (or use default)
+   - Click "Generate License Key"
+   - Copy the license key and send to customer
+
+3. CUSTOMER USES LICENSE:
+   - Customer installs your EA in MT5
+   - Opens EA settings
+   - Pastes license key in "LICENSE_KEY" field
+   - EA automatically validates with your server
+
+=======================================================================
+MT5 EA INSTALLATION FOR CUSTOMERS
+=======================================================================
+
+1. Add your website to MT5 allowed URLs:
+   - MT5 -> Tools -> Options -> Expert Advisors
+   - Check "Allow WebRequest for listed URL"
+   - Add: https://mark8pips.vercel.app
+   - Click OK
+
+2. Install EA:
+   - Copy .ex5 file to: MQL5/Experts/
+   - Restart MT5
+   - Drag EA onto chart
+   - Enter license key in settings
+   - Click OK
+
+3. EA will automatically:
+   - Validate license with server
+   - Register MT5 account number
+   - Track IP address
+   - Log all usage
+   - Revalidate every hour
+
+=======================================================================
+API ENDPOINTS
+=======================================================================
+
+License Validation API:
+POST https://mark8pips.vercel.app/api/license/validate
+
+Request Body:
+{
+  "license_key": "XXXX-XXXX-XXXX-XXXX",
+  "account_number": 12345678,
+  "broker_server": "Server-Name",
+  "account_name": "Account Name",
+  "broker_company": "Broker Company"
+}
+
+Response (Valid):
+{
+  "valid": true,
+  "message": "License validated successfully",
+  "product_name": "Your Product",
+  "expires_at": "2026-10-11T...",
+  "accounts_used": 1,
+  "max_accounts": 3
+}
+
+Response (Invalid):
+{
+  "valid": false,
+  "message": "Invalid license key"
+}
+
+=======================================================================
+SECURITY FEATURES
+=======================================================================
+
+✓ Admin-only access to management panel
+✓ Automatic MT5 account registration
+✓ IP address tracking
+✓ Maximum account limits per license
+✓ License expiration dates
+✓ Real-time validation
+✓ Usage logging and analytics
+✓ License status management (active/suspended/expired)
+
+=======================================================================
+MONITORING & ANALYTICS
+=======================================================================
+
+Dashboard: https://mark8pips.vercel.app/admin
+- Total active licenses
+- Connected MT5 accounts
+- Recent activity logs
+- License expiration tracking
+- Product sales statistics
+
+=======================================================================
+SUPPORT
+=======================================================================
+
+Admin Email: mark8pips@gmail.com
+System URL: https://mark8pips.vercel.app
+
+=======================================================================
