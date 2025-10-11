@@ -27,7 +27,7 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Don't run auth check, just refresh session
+  // IMPORTANT: This refreshes session if expired - required for Server Components
   await supabase.auth.getUser()
 
   return supabaseResponse
