@@ -15,12 +15,13 @@ export default async function AnalyticsPage() {
     .select('created_at, products(price)')
     .order('created_at', { ascending: true })
 
-  const revenueByMonth = licenses?.reduce((acc: any, license) => {
+  const revenueByMonth = licenses?.reduce((acc: Record<string, number>, license) => {
     const month = new Date(license.created_at).toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'short' 
     })
-    const price = license.products?.price || 0
+    const product = Array.isArray(license.products) ? license.products[0] : license.products
+    const price = product?.price || 0
     acc[month] = (acc[month] || 0) + price
     return acc
   }, {})
@@ -37,7 +38,7 @@ export default async function AnalyticsPage() {
     .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
     .order('created_at', { ascending: true })
 
-  const usageByDay = usageLogs?.reduce((acc: any, log) => {
+  const usageByDay = usageLogs?.reduce((acc: Record<string, number>, log) => {
     const day = new Date(log.created_at).toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric' 
@@ -56,9 +57,8 @@ export default async function AnalyticsPage() {
     .from('mt5_accounts')
     .select('ip_address')
 
-  const ipCounts = accountsWithIP?.reduce((acc: any, account) => {
+  const ipCounts = accountsWithIP?.reduce((acc: Record<string, number>, account) => {
     const ip = account.ip_address || 'Unknown'
-    // Extract country/region from IP (simplified - normally use GeoIP)
     const region = ip.startsWith('192') ? 'Local' : 'International'
     acc[region] = (acc[region] || 0) + 1
     return acc
@@ -77,8 +77,12 @@ export default async function AnalyticsPage() {
     .order('created_at', { ascending: false })
     .limit(10)
 
-  const totalRevenue = licenses?.reduce((sum, l) => sum + (l.products?.price || 0), 0) || 0
-  const activeLicenses = await adminClient
+  const totalRevenue = licenses?.reduce((sum, l) => {
+    const product = Array.isArray(l.products) ? l.products[0] : l.products
+    return sum + (product?.price || 0)
+  }, 0) || 0
+
+  const { count: activeLicenses } = await adminClient
     .from('licenses')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'active')
@@ -122,7 +126,7 @@ export default async function AnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium opacity-80">Active Licenses</p>
-                <p className="mt-2 text-3xl font-bold">{activeLicenses.count}</p>
+                <p className="mt-2 text-3xl font-bold">{activeLicenses || 0}</p>
               </div>
               <div className="rounded-full bg-white/20 p-3">
                 <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">

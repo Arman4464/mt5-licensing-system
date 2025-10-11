@@ -2,7 +2,7 @@
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-export function RevenueChart({ data }: { data: any[] }) {
+export function RevenueChart({ data }: { data: Array<{ month: string; revenue: number }> }) {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <AreaChart data={data}>

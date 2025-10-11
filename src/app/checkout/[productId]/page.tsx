@@ -102,7 +102,7 @@ export default async function CheckoutPage({
             </div>
 
             <div className="mt-6 rounded-lg bg-blue-50 p-4">
-              <h4 className="font-semibold text-blue-900 text-sm mb-2">What you'll get:</h4>
+              <h4 className="font-semibold text-blue-900 text-sm mb-2">What you&apos;ll get:</h4>
               <ul className="space-y-1 text-sm text-blue-700">
                 <li>✓ Instant license key delivery via email</li>
                 <li>✓ {product.license_duration_days} days of full access</li>

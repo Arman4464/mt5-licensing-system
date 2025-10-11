@@ -2,7 +2,7 @@
 
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
-export function UsageChart({ data }: { data: any[] }) {
+export function UsageChart({ data }: { data: Array<{ day: string; validations: number }> }) {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart data={data}>

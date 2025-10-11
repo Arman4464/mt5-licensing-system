@@ -17,7 +17,6 @@ async function batchExtendLicenses(formData: FormData) {
     redirect('/admin/batch?error=Days and status required')
   }
 
-  // Get licenses to extend
   const { data: licenses } = await adminClient
     .from('licenses')
     .select('id, expires_at')
@@ -27,7 +26,6 @@ async function batchExtendLicenses(formData: FormData) {
     redirect('/admin/batch?error=No licenses found with that status')
   }
 
-  // Extend all licenses
   const updates = licenses.map(license => {
     const currentExpiry = license.expires_at ? new Date(license.expires_at) : new Date()
     const newExpiry = new Date(currentExpiry)
@@ -45,7 +43,7 @@ async function batchExtendLicenses(formData: FormData) {
   redirect(`/admin/batch?success=Extended ${licenses.length} licenses by ${days} days`)
 }
 
-async function batchSuspendExpired(formData: FormData) {
+async function batchSuspendExpired() {
   'use server'
   
   const { adminClient } = await requireAdmin()
@@ -100,8 +98,6 @@ async function batchDeleteInactive(formData: FormData) {
 export default async function BatchOperationsPage() {
   const { user, adminClient } = await requireAdmin()
 
-  const { data: stats } = await adminClient.rpc('get_license_stats', {})
-
   const { count: activeCount } = await adminClient
     .from('licenses')
     .select('*', { count: 'exact', head: true })
@@ -136,15 +132,15 @@ export default async function BatchOperationsPage() {
         <div className="mb-8 grid gap-6 md:grid-cols-3">
           <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
             <p className="text-sm font-medium text-gray-600">Active Licenses</p>
-            <p className="mt-2 text-3xl font-bold text-green-600">{activeCount}</p>
+            <p className="mt-2 text-3xl font-bold text-green-600">{activeCount || 0}</p>
           </div>
           <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
             <p className="text-sm font-medium text-gray-600">Expired Licenses</p>
-            <p className="mt-2 text-3xl font-bold text-red-600">{expiredCount}</p>
+            <p className="mt-2 text-3xl font-bold text-red-600">{expiredCount || 0}</p>
           </div>
           <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
             <p className="text-sm font-medium text-gray-600">Suspended Licenses</p>
-            <p className="mt-2 text-3xl font-bold text-yellow-600">{suspendedCount}</p>
+            <p className="mt-2 text-3xl font-bold text-yellow-600">{suspendedCount || 0}</p>
           </div>
         </div>
 
@@ -230,11 +226,6 @@ export default async function BatchOperationsPage() {
             </div>
             <button
               type="submit"
-              onClick={(e) => {
-                if (!confirm('Are you sure? This action cannot be undone!')) {
-                  e.preventDefault()
-                }
-              }}
               className="rounded-md bg-red-600 px-6 py-2 text-sm font-semibold text-white hover:bg-red-700"
             >
               Delete Inactive Licenses

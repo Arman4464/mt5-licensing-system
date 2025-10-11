@@ -111,7 +111,7 @@ export default async function LicenseDetailPage({
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Connected MT5 Accounts</h3>
               {license.mt5_accounts && license.mt5_accounts.length > 0 ? (
                 <div className="space-y-3">
-                  {license.mt5_accounts.map((account: any) => (
+                  {license.mt5_accounts.map((account: { id: string; account_number: number; broker_server: string; last_used_at: string }) => (
                     <div key={account.id} className="rounded-lg border border-gray-200 p-4">
                       <div className="flex items-center justify-between">
                         <div>
