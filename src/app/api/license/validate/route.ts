@@ -5,17 +5,24 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 export async function POST(request: Request) {
+  const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
+
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    
     const body = await request.json()
+    console.log('Validation request:', { license_key: body.license_key, account: body.account_number })
+    
     const { 
       license_key, 
       account_number, 
-      ip_address, 
-      broker_server, 
-      account_name, 
-      broker_company
+      ip_address = 'unknown', 
+      broker_server = 'unknown', 
+      account_name = 'unknown', 
+      broker_company = 'unknown'
     } = body
 
     if (!license_key || !account_number) {
@@ -25,19 +32,29 @@ export async function POST(request: Request) {
       )
     }
 
+    // Get license with product
     const { data: license, error: licenseError } = await supabase
       .from('licenses')
-      .select('*, products(*)')
+      .select('id, license_key, status, expires_at, product_id, products!inner(id, name, price, max_accounts)')
       .eq('license_key', license_key)
       .single()
 
-    if (licenseError || !license) {
+    if (licenseError) {
+      console.error('License query error:', licenseError)
       return NextResponse.json(
         { valid: false, message: 'Invalid license key' },
         { status: 404 }
       )
     }
 
+    if (!license) {
+      return NextResponse.json(
+        { valid: false, message: 'License not found' },
+        { status: 404 }
+      )
+    }
+
+    // Check status
     if (license.status !== 'active') {
       return NextResponse.json(
         { valid: false, message: `License is ${license.status}` },
@@ -45,6 +62,7 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check expiration
     if (license.expires_at && new Date(license.expires_at) < new Date()) {
       await supabase
         .from('licenses')
@@ -57,29 +75,36 @@ export async function POST(request: Request) {
       )
     }
 
-    const { data: existingAccounts } = await supabase
+    // Get existing accounts
+    const { data: existingAccounts, error: accountsError } = await supabase
       .from('mt5_accounts')
-      .select('*')
+      .select('id, account_number')
       .eq('license_id', license.id)
+
+    if (accountsError) {
+      console.error('Accounts query error:', accountsError)
+    }
 
     const accountExists = existingAccounts?.find(acc => acc.account_number === account_number)
     let mt5AccountId = accountExists?.id
 
+    // Check account limit
     if (!accountExists) {
       const maxAccounts = license.products?.max_accounts || 3
-      const activeAccounts = existingAccounts?.length || 0
+      const currentAccounts = existingAccounts?.length || 0
       
-      if (activeAccounts >= maxAccounts) {
+      if (currentAccounts >= maxAccounts) {
         return NextResponse.json(
           { 
             valid: false, 
-            message: `Maximum ${maxAccounts} accounts allowed`,
+            message: `Maximum ${maxAccounts} accounts reached. Remove an account first.`,
           },
           { status: 403 }
         )
       }
 
-      const { data: newAccount } = await supabase
+      // Register new account
+      const { data: newAccount, error: insertError } = await supabase
         .from('mt5_accounts')
         .insert({
           license_id: license.id,
@@ -90,11 +115,16 @@ export async function POST(request: Request) {
           ip_address,
           last_used_at: new Date().toISOString(),
         })
-        .select()
+        .select('id')
         .single()
-      
-      mt5AccountId = newAccount?.id
+
+      if (insertError) {
+        console.error('Account insert error:', insertError)
+      } else {
+        mt5AccountId = newAccount?.id
+      }
     } else {
+      // Update existing
       await supabase
         .from('mt5_accounts')
         .update({
@@ -104,6 +134,7 @@ export async function POST(request: Request) {
         .eq('id', accountExists.id)
     }
 
+    // Log usage
     await supabase.from('usage_logs').insert({
       license_id: license.id,
       mt5_account_id: mt5AccountId,
@@ -119,22 +150,30 @@ export async function POST(request: Request) {
     const accountsUsed = (existingAccounts?.length || 0) + (accountExists ? 0 : 1)
     const daysRemaining = license.expires_at 
       ? Math.ceil((new Date(license.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-      : null
+      : 999
+
+    console.log('Validation successful:', { license_key, accounts_used: accountsUsed })
 
     return NextResponse.json({
       valid: true,
       message: 'License validated successfully',
-      product_name: license.products?.name,
+      product_name: license.products?.name || 'Unknown',
       expires_at: license.expires_at,
       accounts_used: accountsUsed,
       max_accounts: license.products?.max_accounts || 3,
       days_remaining: daysRemaining
+    }, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+      },
     })
 
-  } catch (error) {
-    console.error('Validation error:', error)
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Validation error:', errorMessage)
     return NextResponse.json(
-      { valid: false, message: 'Server error during validation' },
+      { valid: false, message: 'Server error: ' + errorMessage },
       { status: 500 }
     )
   }
