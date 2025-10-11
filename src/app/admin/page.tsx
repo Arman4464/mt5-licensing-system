@@ -1,17 +1,11 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
-import Link from 'next/link'
+import { requireAdmin } from '@/utils/admin'
+import { AdminNav } from '@/components/admin-nav'
+import { Toast } from '@/components/toast'
+import { Suspense } from 'react'
 
 export default async function AdminPage() {
-  const supabase = await createClient()
-  
-  const { data: { user }, error } = await supabase.auth.getUser()
-  
-  if (error || !user) {
-    redirect('/login')
-  }
+  const { user, supabase } = await requireAdmin()
 
-  // Get statistics
   const { count: licensesCount } = await supabase
     .from('licenses')
     .select('*', { count: 'exact', head: true })
@@ -31,56 +25,43 @@ export default async function AdminPage() {
     .limit(10)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 justify-between">
-            <div className="flex space-x-8">
-              <div className="flex flex-shrink-0 items-center">
-                <h1 className="text-xl font-bold text-gray-900">MT5 Admin Panel</h1>
-              </div>
-              <div className="flex space-x-4">
-                <Link href="/admin" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-900">
-                  Dashboard
-                </Link>
-                <Link href="/admin/licenses" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
-                  Licenses
-                </Link>
-                <Link href="/admin/products" className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 hover:text-gray-900">
-                  Products
-                </Link>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-700">{user.email}</span>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <div className="min-h-screen bg-gray-100">
+      <AdminNav userEmail={user.email || ''} />
+      <Suspense>
+        <Toast />
+      </Suspense>
+      
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
-        
-        <div className="mt-6 grid gap-6 md:grid-cols-3">
-          <div className="rounded-lg bg-white p-6 shadow">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Welcome back! Here's an overview of your licensing system.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
             <h3 className="text-sm font-medium text-gray-500">Total Licenses</h3>
             <p className="mt-2 text-3xl font-bold text-blue-600">{licensesCount || 0}</p>
+            <p className="mt-1 text-xs text-gray-500">Active license keys</p>
           </div>
-          
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-sm font-medium text-gray-500">Active MT5 Accounts</h3>
+
+          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+            <h3 className="text-sm font-medium text-gray-500">MT5 Accounts</h3>
             <p className="mt-2 text-3xl font-bold text-green-600">{accountsCount || 0}</p>
+            <p className="mt-1 text-xs text-gray-500">Connected trading accounts</p>
           </div>
-          
-          <div className="rounded-lg bg-white p-6 shadow">
-            <h3 className="text-sm font-medium text-gray-500">Total Products</h3>
+
+          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+            <h3 className="text-sm font-medium text-gray-500">Products</h3>
             <p className="mt-2 text-3xl font-bold text-purple-600">{productsCount || 0}</p>
+            <p className="mt-1 text-xs text-gray-500">Available EA products</p>
           </div>
         </div>
 
-        <div className="mt-8 rounded-lg bg-white p-6 shadow">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-          <div className="mt-4 overflow-hidden">
+        <div className="mt-8 rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+          <div className="overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -101,12 +82,14 @@ export default async function AdminPage() {
               <tbody className="divide-y divide-gray-200 bg-white">
                 {recentLogs && recentLogs.length > 0 ? (
                   recentLogs.map((log) => (
-                    <tr key={log.id}>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                    <tr key={log.id} className="hover:bg-gray-50">
+                      <td className="whitespace-nowrap px-6 py-4 text-sm font-mono text-gray-900">
                         {log.licenses?.license_key || 'N/A'}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                        {log.event_type}
+                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                          {log.event_type}
+                        </span>
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                         {log.ip_address || 'N/A'}
@@ -118,8 +101,8 @@ export default async function AdminPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                      No activity yet
+                    <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-500">
+                      No activity yet. Create products and licenses to get started!
                     </td>
                   </tr>
                 )}
