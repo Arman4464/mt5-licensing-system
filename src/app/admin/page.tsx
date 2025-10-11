@@ -3,13 +3,12 @@ import { AdminNav } from '@/components/admin-nav'
 import { StatsCard } from '@/components/stats-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { DollarSign, Key, Users, Activity, TrendingUp, Clock } from 'lucide-react'
+import { DollarSign, Key, Users, Activity, TrendingUp, Zap, ArrowUpRight } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AdminDashboard() {
   const { user, adminClient } = await requireAdmin()
 
-  // Get stats
   const { count: totalLicenses } = await adminClient
     .from('licenses')
     .select('*', { count: 'exact', head: true })
@@ -28,7 +27,6 @@ export default async function AdminDashboard() {
     .select('*', { count: 'exact', head: true })
     .eq('event_type', 'validation')
 
-  // Get recent licenses
   const { data: recentLicenses } = await adminClient
     .from('licenses')
     .select(`
@@ -39,82 +37,114 @@ export default async function AdminDashboard() {
     .order('created_at', { ascending: false })
     .limit(5)
 
-  // Calculate revenue (mock for now)
   const { data: products } = await adminClient.from('products').select('price')
   const totalRevenue = products?.reduce((sum, p) => sum + (p.price || 0), 0) || 0
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen gradient-bg">
       <AdminNav userEmail={user.email || ''} />
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground mt-2">
-            Welcome back! Here&apos;s what&apos;s happening today.
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 page-transition">
+        {/* Hero Header */}
+        <div className="mb-12">
+          <h1 className="text-4xl font-bold tracking-tight mb-2">
+            Welcome back, <span className="gradient-text">{user.email?.split('@')[0]}</span>
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Here&apos;s what&apos;s happening with your business today.
           </p>
         </div>
 
         {/* Stats Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-          <StatsCard
-            title="Total Revenue"
-            value={`₹${totalRevenue.toLocaleString()}`}
-            icon={DollarSign}
-            trend={{ value: 12.5, isPositive: true }}
-            description="All-time earnings"
-          />
-          <StatsCard
-            title="Active Licenses"
-            value={activeLicenses || 0}
-            icon={Key}
-            trend={{ value: 8.2, isPositive: true }}
-            description={`${totalLicenses || 0} total licenses`}
-          />
-          <StatsCard
-            title="Total Users"
-            value={totalUsers || 0}
-            icon={Users}
-            trend={{ value: 5.1, isPositive: true }}
-            description="Registered customers"
-          />
-          <StatsCard
-            title="Validations"
-            value={totalValidations || 0}
-            icon={Activity}
-            description="API calls this month"
-          />
+          <div className="stat-card glass-card rounded-xl p-6 hover-lift">
+            <div className="flex items-center justify-between mb-4">
+              <div className="rounded-lg bg-emerald-500/10 p-3">
+                <DollarSign className="h-6 w-6 text-emerald-500" />
+              </div>
+              <Badge variant="success" className="badge-pulse">+12.5%</Badge>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Total Revenue</p>
+              <p className="text-3xl font-bold">₹{totalRevenue.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground mt-2">All-time earnings</p>
+            </div>
+          </div>
+
+          <div className="stat-card glass-card rounded-xl p-6 hover-lift">
+            <div className="flex items-center justify-between mb-4">
+              <div className="rounded-lg bg-blue-500/10 p-3">
+                <Key className="h-6 w-6 text-blue-500" />
+              </div>
+              <Badge variant="default">Active</Badge>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Active Licenses</p>
+              <p className="text-3xl font-bold">{activeLicenses || 0}</p>
+              <p className="text-xs text-muted-foreground mt-2">{totalLicenses || 0} total licenses</p>
+            </div>
+          </div>
+
+          <div className="stat-card glass-card rounded-xl p-6 hover-lift">
+            <div className="flex items-center justify-between mb-4">
+              <div className="rounded-lg bg-purple-500/10 p-3">
+                <Users className="h-6 w-6 text-purple-500" />
+              </div>
+              <Badge variant="secondary">+5.1%</Badge>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Total Users</p>
+              <p className="text-3xl font-bold">{totalUsers || 0}</p>
+              <p className="text-xs text-muted-foreground mt-2">Registered customers</p>
+            </div>
+          </div>
+
+          <div className="stat-card glass-card rounded-xl p-6 hover-lift">
+            <div className="flex items-center justify-between mb-4">
+              <div className="rounded-lg bg-orange-500/10 p-3">
+                <Activity className="h-6 w-6 text-orange-500" />
+              </div>
+              <Zap className="h-5 w-5 text-orange-500" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">API Validations</p>
+              <p className="text-3xl font-bold">{totalValidations || 0}</p>
+              <p className="text-xs text-muted-foreground mt-2">This month</p>
+            </div>
+          </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Content Grid */}
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Recent Licenses */}
-          <Card>
+          <Card className="glass-card border-0 hover-lift">
             <CardHeader>
-              <CardTitle>Recent Licenses</CardTitle>
-              <CardDescription>Latest license activations</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5 text-[#CFFF04]" />
+                Recent Licenses
+              </CardTitle>
+              <CardDescription>Latest activations</CardDescription>
             </CardHeader>
             <CardContent>
               {recentLicenses && recentLicenses.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {recentLicenses.map((license) => {
                     const userInfo = Array.isArray(license.users) ? license.users[0] : license.users
                     const product = Array.isArray(license.products) ? license.products[0] : license.products
                     
                     return (
-                      <div
+                      <Link
                         key={license.id}
-                        className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent transition-colors"
+                        href={`/admin/licenses/${license.id}`}
+                        className="table-row flex items-center justify-between rounded-lg border border-border/50 p-4 group"
                       >
                         <div className="space-y-1">
-                          <p className="text-sm font-medium">{userInfo?.email}</p>
-                          <p className="text-xs text-muted-foreground">{product?.name}</p>
-                          <p className="text-xs font-mono text-muted-foreground">
-                            {license.license_key}
+                          <p className="text-sm font-medium group-hover:text-[#CFFF04] transition-colors">
+                            {userInfo?.email}
                           </p>
+                          <p className="text-xs text-muted-foreground">{product?.name}</p>
                         </div>
-                        <div className="text-right space-y-1">
+                        <div className="flex items-center gap-3">
                           <Badge
                             variant={
                               license.status === 'active'
@@ -123,84 +153,82 @@ export default async function AdminDashboard() {
                                 ? 'warning'
                                 : 'destructive'
                             }
+                            className="badge-pulse"
                           >
                             {license.status}
                           </Badge>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(license.created_at).toLocaleDateString()}
-                          </p>
+                          <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover:text-[#CFFF04] transition-colors" />
                         </div>
-                      </div>
+                      </Link>
                     )
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No licenses yet
-                </p>
+                <div className="text-center py-12">
+                  <Key className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm text-muted-foreground">No licenses yet</p>
+                </div>
               )}
               <Link
                 href="/admin/licenses"
-                className="block mt-4 text-sm text-primary hover:underline text-center"
+                className="block mt-4 text-sm text-[#CFFF04] hover:underline text-center group"
               >
-                View all licenses →
+                View all licenses
+                <ArrowUpRight className="inline h-3 w-3 ml-1 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
               </Link>
             </CardContent>
           </Card>
 
           {/* Quick Actions */}
-          <Card>
+          <Card className="glass-card border-0 hover-lift">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Common administrative tasks</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-[#CFFF04]" />
+                Quick Actions
+              </CardTitle>
+              <CardDescription>Common tasks</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Link
                 href="/admin/licenses"
-                className="flex items-center justify-between rounded-lg border p-4 hover:bg-accent transition-colors"
+                className="table-row flex items-center gap-4 rounded-lg border border-border/50 p-4 group button-shine"
               >
-                <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-blue-500/10 p-2">
-                    <Key className="h-5 w-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Generate License</p>
-                    <p className="text-xs text-muted-foreground">Create new customer license</p>
-                  </div>
+                <div className="rounded-lg bg-blue-500/10 p-3 group-hover:bg-blue-500/20 transition-colors">
+                  <Key className="h-6 w-6 text-blue-500" />
                 </div>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="font-medium group-hover:text-[#CFFF04] transition-colors">Generate License</p>
+                  <p className="text-xs text-muted-foreground">Create new customer license</p>
+                </div>
+                <TrendingUp className="h-5 w-5 text-muted-foreground group-hover:text-[#CFFF04] transition-colors" />
               </Link>
 
               <Link
                 href="/admin/products"
-                className="flex items-center justify-between rounded-lg border p-4 hover:bg-accent transition-colors"
+                className="table-row flex items-center gap-4 rounded-lg border border-border/50 p-4 group button-shine"
               >
-                <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-purple-500/10 p-2">
-                    <Activity className="h-5 w-5 text-purple-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium">Manage Products</p>
-                    <p className="text-xs text-muted-foreground">Add or edit EAs</p>
-                  </div>
+                <div className="rounded-lg bg-purple-500/10 p-3 group-hover:bg-purple-500/20 transition-colors">
+                  <Activity className="h-6 w-6 text-purple-500" />
                 </div>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="font-medium group-hover:text-[#CFFF04] transition-colors">Manage Products</p>
+                  <p className="text-xs text-muted-foreground">Add or edit EAs</p>
+                </div>
+                <TrendingUp className="h-5 w-5 text-muted-foreground group-hover:text-[#CFFF04] transition-colors" />
               </Link>
 
               <Link
                 href="/admin/analytics"
-                className="flex items-center justify-between rounded-lg border p-4 hover:bg-accent transition-colors"
+                className="table-row flex items-center gap-4 rounded-lg border border-border/50 p-4 group button-shine"
               >
-                <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-green-500/10 p-2">
-                    <Clock className="h-5 w-5 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium">View Analytics</p>
-                    <p className="text-xs text-muted-foreground">Revenue & performance</p>
-                  </div>
+                <div className="rounded-lg bg-emerald-500/10 p-3 group-hover:bg-emerald-500/20 transition-colors">
+                  <DollarSign className="h-6 w-6 text-emerald-500" />
                 </div>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <div className="flex-1">
+                  <p className="font-medium group-hover:text-[#CFFF04] transition-colors">View Analytics</p>
+                  <p className="text-xs text-muted-foreground">Revenue & performance</p>
+                </div>
+                <TrendingUp className="h-5 w-5 text-muted-foreground group-hover:text-[#CFFF04] transition-colors" />
               </Link>
             </CardContent>
           </Card>
