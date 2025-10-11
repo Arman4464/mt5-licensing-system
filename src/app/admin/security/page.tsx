@@ -68,16 +68,6 @@ async function toggleIPStatus(formData: FormData) {
   redirect('/admin/security?success=IP status updated')
 }
 
-interface LicenseData {
-  license_key: string
-}
-
-interface AccountData {
-  license_id: string
-  ip_address: string
-  licenses: LicenseData | null
-}
-
 export default async function SecurityPage() {
   const { user, adminClient } = await requireAdmin()
 
@@ -92,23 +82,48 @@ export default async function SecurityPage() {
     .eq('status', 'active')
     .order('license_key', { ascending: true })
 
+  // Get suspicious activity
   const { data: suspiciousActivity } = await adminClient
     .from('mt5_accounts')
     .select('license_id, ip_address, licenses(license_key)')
 
-  const ipsByLicense = (suspiciousActivity as AccountData[] || []).reduce((acc: Record<string, { license_key: string; ips: Set<string> }>, account) => {
-    const key = account.license_id
-    if (!acc[key]) acc[key] = { license_key: account.licenses?.license_key || '', ips: new Set() }
-    acc[key].ips.add(account.ip_address)
-    return acc
-  }, {})
+  // Group IPs by license - simplified approach
+  const ipsByLicense: Record<string, { license_key: string; ips: string[] }> = {}
+  
+  if (suspiciousActivity && Array.isArray(suspiciousActivity)) {
+    for (const account of suspiciousActivity) {
+      const licenseId = account.license_id
+      let licenseKey = ''
+      
+      // Handle both array and object response from Supabase
+      if (account.licenses) {
+        if (Array.isArray(account.licenses)) {
+          licenseKey = account.licenses.length > 0 ? account.licenses[0].license_key : ''
+        } else {
+          licenseKey = account.licenses.license_key || ''
+        }
+      }
+      
+      if (!ipsByLicense[licenseId]) {
+        ipsByLicense[licenseId] = {
+          license_key: licenseKey,
+          ips: []
+        }
+      }
+      
+      if (!ipsByLicense[licenseId].ips.includes(account.ip_address)) {
+        ipsByLicense[licenseId].ips.push(account.ip_address)
+      }
+    }
+  }
 
+  // Find licenses with > 3 IPs
   const suspicious = Object.entries(ipsByLicense)
-    .filter(([, data]) => data.ips.size > 3)
+    .filter(([, data]) => data.ips.length > 3)
     .map(([licenseId, data]) => ({
       licenseId,
       license_key: data.license_key,
-      ipCount: data.ips.size,
+      ipCount: data.ips.length,
     }))
 
   return (
@@ -236,52 +251,63 @@ export default async function SecurityPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {whitelist.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-mono text-gray-900">
-                        {item.licenses?.license_key}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-mono text-gray-900">
-                        {item.ip_address}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {item.description || '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          item.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {item.is_active ? 'Active' : 'Disabled'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {new Date(item.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <form action={toggleIPStatus}>
-                            <input type="hidden" name="id" value={item.id} />
-                            <input type="hidden" name="is_active" value={String(item.is_active)} />
-                            <button
-                              type="submit"
-                              className="text-blue-600 hover:text-blue-700 text-sm"
-                            >
-                              {item.is_active ? 'Disable' : 'Enable'}
-                            </button>
-                          </form>
-                          <form action={removeIPWhitelist}>
-                            <input type="hidden" name="id" value={item.id} />
-                            <button
-                              type="submit"
-                              className="text-red-600 hover:text-red-700 text-sm"
-                            >
-                              Remove
-                            </button>
-                          </form>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {whitelist.map((item) => {
+                    let licenseKey = ''
+                    if (item.licenses) {
+                      if (Array.isArray(item.licenses)) {
+                        licenseKey = item.licenses.length > 0 ? item.licenses[0].license_key : ''
+                      } else {
+                        licenseKey = item.licenses.license_key || ''
+                      }
+                    }
+                    
+                    return (
+                      <tr key={item.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                          {licenseKey || 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                          {item.ip_address}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {item.description || '-'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                            item.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {item.is_active ? 'Active' : 'Disabled'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <form action={toggleIPStatus}>
+                              <input type="hidden" name="id" value={item.id} />
+                              <input type="hidden" name="is_active" value={String(item.is_active)} />
+                              <button
+                                type="submit"
+                                className="text-blue-600 hover:text-blue-700 text-sm"
+                              >
+                                {item.is_active ? 'Disable' : 'Enable'}
+                              </button>
+                            </form>
+                            <form action={removeIPWhitelist}>
+                              <input type="hidden" name="id" value={item.id} />
+                              <button
+                                type="submit"
+                                className="text-red-600 hover:text-red-700 text-sm"
+                              >
+                                Remove
+                              </button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
