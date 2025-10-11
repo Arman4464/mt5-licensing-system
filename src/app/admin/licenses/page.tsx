@@ -521,7 +521,7 @@ export default async function LicensesPage() {
                 <div className="flex gap-3 justify-end">
                   <button
                     type="button"
-                    onClick={(e) => {
+                    onClick={() => {
                       const modal = document.getElementById(`extend-modal-${license.id}`)
                       if (modal) modal.classList.add('hidden')
                     }}

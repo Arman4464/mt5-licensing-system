@@ -128,7 +128,17 @@ export default async function LicenseDetailPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {license.mt5_accounts.map((account: any) => (
+                  {license.mt5_accounts.map((account: {
+  id: string;
+  account_number: number;
+  account_name: string;
+  broker_company: string;
+  broker_server: string;
+  ip_address: string;
+  created_at: string;
+  last_used_at: string;
+}) => (
+
                     <tr key={account.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-mono text-gray-900">
                         {account.account_number}
