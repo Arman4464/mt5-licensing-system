@@ -21,10 +21,10 @@ export default async function AnalyticsPage() {
     .eq('is_online', true)
     .order('last_heartbeat', { ascending: false })
 
-  const { data: topProducts } = await adminClient
-    .from('licenses')
-    .select('product_id, products(name), count')
-    .limit(5)
+  //const { data: topProducts } = await adminClient
+    //.from('licenses')
+    //.select('product_id, products(name), count')
+    //.limit(5)
 
   return (
     <div className="min-h-screen bg-gray-100">
