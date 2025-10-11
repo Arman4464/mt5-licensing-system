@@ -8,26 +8,39 @@ import { redirect } from 'next/navigation'
 async function generateLicense(formData: FormData) {
   'use server'
   
-  const { supabase } = await requireAdmin()
-  
   try {
+    const { supabase } = await requireAdmin()
+    
     const productId = formData.get('product_id') as string
     const userEmail = formData.get('user_email') as string
     const durationDays = parseInt(formData.get('duration_days') as string)
 
+    console.log('Generating license with:', { productId, userEmail, durationDays })
+
     if (!productId || !userEmail || !durationDays) {
+      console.error('Missing fields:', { productId, userEmail, durationDays })
       redirect('/admin/licenses?error=All fields are required')
     }
 
+    // Get product
+    console.log('Fetching product...')
     const { data: product, error: productError } = await supabase
       .from('products')
       .select('*')
       .eq('id', productId)
       .single()
 
-    if (productError || !product) {
+    if (productError) {
+      console.error('Product error:', productError)
+      redirect('/admin/licenses?error=Product error: ' + encodeURIComponent(productError.message))
+    }
+
+    if (!product) {
+      console.error('Product not found')
       redirect('/admin/licenses?error=Product not found')
     }
+
+    console.log('Product found:', product.name)
 
     // Generate license key
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -37,20 +50,29 @@ async function generateLicense(formData: FormData) {
       ).join('')
     }).join('-')
 
+    console.log('Generated key:', licenseKey)
+
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + durationDays)
 
-    // Find or create user in users table
-    let userId
-    const { data: existingUser } = await supabase
+    // Find or create user
+    console.log('Checking for existing user...')
+    const { data: existingUser, error: existingUserError } = await supabase
       .from('users')
       .select('id')
       .eq('email', userEmail)
-      .single()
+      .maybeSingle()
 
+    if (existingUserError) {
+      console.error('Error checking user:', existingUserError)
+    }
+
+    let userId
     if (existingUser) {
       userId = existingUser.id
+      console.log('Using existing user:', userId)
     } else {
+      console.log('Creating new user...')
       const { data: newUser, error: userError } = await supabase
         .from('users')
         .insert({ 
@@ -61,31 +83,47 @@ async function generateLicense(formData: FormData) {
         .single()
 
       if (userError) {
-        redirect('/admin/licenses?error=' + encodeURIComponent(userError.message))
+        console.error('User creation error:', userError)
+        redirect('/admin/licenses?error=User creation failed: ' + encodeURIComponent(userError.message))
       }
-      userId = newUser.id
+      userId = newUser?.id
+      console.log('Created new user:', userId)
     }
 
-    const { error: licenseError } = await supabase.from('licenses').insert({
-      user_id: userId,
-      product_id: productId,
-      license_key: licenseKey,
-      status: 'active',
-      expires_at: expiresAt.toISOString(),
-    })
+    if (!userId) {
+      console.error('No user ID obtained')
+      redirect('/admin/licenses?error=Failed to get user ID')
+    }
+
+    // Create license
+    console.log('Creating license...')
+    const { data: license, error: licenseError } = await supabase
+      .from('licenses')
+      .insert({
+        user_id: userId,
+        product_id: productId,
+        license_key: licenseKey,
+        status: 'active',
+        expires_at: expiresAt.toISOString(),
+      })
+      .select()
+      .single()
 
     if (licenseError) {
       console.error('License creation error:', licenseError)
-      redirect('/admin/licenses?error=' + encodeURIComponent(licenseError.message))
+      redirect('/admin/licenses?error=License creation failed: ' + encodeURIComponent(licenseError.message))
     }
 
+    console.log('License created successfully:', license)
+
     revalidatePath('/admin/licenses')
-    redirect('/admin/licenses?success=License generated: ' + licenseKey)
-  } catch (error) {
-    console.error('Unexpected error:', error)
-    redirect('/admin/licenses?error=Failed to generate license')
+    redirect('/admin/licenses?success=License generated successfully: ' + licenseKey)
+  } catch (error: any) {
+    console.error('Unexpected error in generateLicense:', error)
+    redirect('/admin/licenses?error=System error: ' + encodeURIComponent(error?.message || 'Unknown error'))
   }
 }
+
 
 async function updateLicenseStatus(formData: FormData) {
   'use server'
