@@ -8,19 +8,15 @@ export async function POST(request: Request) {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
+    const body = await request.json()
     const { 
       license_key, 
       account_number, 
       ip_address, 
       broker_server, 
       account_name, 
-      broker_company,
-      terminal_name,
-      terminal_build,
-      terminal_company,
-      computer_name,
-      os_version
-    } = await request.json()
+      broker_company
+    } = body
 
     if (!license_key || !account_number) {
       return NextResponse.json(
@@ -29,7 +25,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Get license with product details
     const { data: license, error: licenseError } = await supabase
       .from('licenses')
       .select('*, products(*)')
@@ -43,7 +38,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check license status
     if (license.status !== 'active') {
       return NextResponse.json(
         { valid: false, message: `License is ${license.status}` },
@@ -51,7 +45,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check expiration
     if (license.expires_at && new Date(license.expires_at) < new Date()) {
       await supabase
         .from('licenses')
@@ -64,7 +57,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check existing MT5 accounts
     const { data: existingAccounts } = await supabase
       .from('mt5_accounts')
       .select('*')
@@ -73,24 +65,20 @@ export async function POST(request: Request) {
     const accountExists = existingAccounts?.find(acc => acc.account_number === account_number)
     let mt5AccountId = accountExists?.id
 
-    // If account doesn't exist, check max limit
     if (!accountExists) {
       const maxAccounts = license.products?.max_accounts || 3
-      const activeAccounts = existingAccounts?.filter(acc => acc.is_active).length || 0
+      const activeAccounts = existingAccounts?.length || 0
       
       if (activeAccounts >= maxAccounts) {
         return NextResponse.json(
           { 
             valid: false, 
-            message: `Maximum ${maxAccounts} accounts allowed. Deactivate an account first.`,
-            current_accounts: activeAccounts,
-            max_accounts: maxAccounts
+            message: `Maximum ${maxAccounts} accounts allowed`,
           },
           { status: 403 }
         )
       }
 
-      // Register new account with full details
       const { data: newAccount } = await supabase
         .from('mt5_accounts')
         .insert({
@@ -100,39 +88,22 @@ export async function POST(request: Request) {
           broker_server,
           broker_company,
           ip_address,
-          terminal_name,
-          terminal_build,
-          terminal_company,
-          computer_name,
-          os_version,
-          first_seen_at: new Date().toISOString(),
           last_used_at: new Date().toISOString(),
-          is_active: true
         })
         .select()
         .single()
       
       mt5AccountId = newAccount?.id
     } else {
-      // Update existing account info
       await supabase
         .from('mt5_accounts')
         .update({
           last_used_at: new Date().toISOString(),
           ip_address,
-          terminal_build,
-          is_active: true
         })
         .eq('id', accountExists.id)
     }
 
-    // Update last validated timestamp
-    await supabase
-      .from('licenses')
-      .update({ last_validated_at: new Date().toISOString() })
-      .eq('id', license.id)
-
-    // Log validation with enhanced details
     await supabase.from('usage_logs').insert({
       license_id: license.id,
       mt5_account_id: mt5AccountId,
@@ -141,34 +112,14 @@ export async function POST(request: Request) {
       metadata: {
         account_number,
         broker_server,
-        broker_company,
-        terminal_name,
-        terminal_build,
-        computer_name,
-        os_version,
         timestamp: new Date().toISOString(),
       },
     })
 
-    // Update or create active session
-    await supabase
-      .from('active_sessions')
-      .upsert({
-        license_id: license.id,
-        mt5_account_id: mt5AccountId,
-        last_heartbeat: new Date().toISOString(),
-        is_online: true,
-        ip_address,
-        terminal_info: {
-          name: terminal_name,
-          build: terminal_build,
-          company: terminal_company
-        }
-      }, {
-        onConflict: 'license_id,mt5_account_id'
-      })
-
-    const accountsUsed = (existingAccounts?.filter(a => a.is_active).length || 0) + (accountExists ? 0 : 1)
+    const accountsUsed = (existingAccounts?.length || 0) + (accountExists ? 0 : 1)
+    const daysRemaining = license.expires_at 
+      ? Math.ceil((new Date(license.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      : null
 
     return NextResponse.json({
       valid: true,
@@ -177,9 +128,7 @@ export async function POST(request: Request) {
       expires_at: license.expires_at,
       accounts_used: accountsUsed,
       max_accounts: license.products?.max_accounts || 3,
-      days_remaining: license.expires_at 
-        ? Math.ceil((new Date(license.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-        : null
+      days_remaining: daysRemaining
     })
 
   } catch (error) {
