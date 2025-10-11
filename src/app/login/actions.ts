@@ -15,11 +15,11 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword(data)
 
   if (error) {
-    redirect('/login?message=Could not authenticate user')
+    redirect('/login?message=' + encodeURIComponent('Invalid email or password. Please try again.'))
   }
 
   revalidatePath('/', 'layout')
-  redirect('/dashboard')
+  redirect('/admin')
 }
 
 export async function signup(formData: FormData) {
@@ -33,9 +33,9 @@ export async function signup(formData: FormData) {
   const { error } = await supabase.auth.signUp(data)
 
   if (error) {
-    redirect('/login?message=Could not create user')
+    redirect('/login?message=' + encodeURIComponent('Error creating account: ' + error.message))
   }
 
   revalidatePath('/', 'layout')
-  redirect('/login?message=Check email to continue sign in process')
+  redirect('/login?message=' + encodeURIComponent('Account created! You can now sign in.'))
 }

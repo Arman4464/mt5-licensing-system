@@ -1,6 +1,10 @@
 import { login, signup } from './actions'
 
-export default function LoginPage() {
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: { message?: string }
+}) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg">
@@ -12,6 +16,12 @@ export default function LoginPage() {
             Sign in to manage your EA licenses
           </p>
         </div>
+        
+        {searchParams?.message && (
+          <div className="rounded-md bg-blue-50 p-4">
+            <p className="text-sm text-blue-700">{searchParams.message}</p>
+          </div>
+        )}
         
         <form className="mt-8 space-y-6">
           <div className="space-y-4 rounded-md">
@@ -26,6 +36,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 required
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                placeholder="you@example.com"
               />
             </div>
             
@@ -39,7 +50,9 @@ export default function LoginPage() {
                 type="password"
                 autoComplete="current-password"
                 required
+                minLength={6}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                placeholder="••••••••"
               />
             </div>
           </div>
@@ -59,6 +72,10 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
+        
+        <p className="text-center text-xs text-gray-500">
+          First time? Click Sign Up to create an account
+        </p>
       </div>
     </div>
   )
