@@ -26,7 +26,7 @@ export default function LicenseExpiringEmail({
   return (
     <Html>
       <Head />
-      <Preview>Your {productName} License Expires in {daysRemaining} Days</Preview>
+      <Preview>Your {productName} License Expires in {String(daysRemaining)} Days</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={h1}>⚠️ License Expiring Soon</Heading>
