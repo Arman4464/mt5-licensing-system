@@ -4,32 +4,67 @@ import Link from 'next/link'
 
 export default async function CustomerPortalPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  
+  let user
+  try {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    user = authUser
+  } catch (error) {
+    console.error('Auth error:', error)
+    redirect('/login?redirect=/portal')
+  }
 
   if (!user) {
     redirect('/login?redirect=/portal')
   }
 
-  // Get customer's licenses
-  const { data: customerUser } = await supabase
-    .from('users')
-    .select('*')
-    .eq('email', user.email)
-    .single()
+  let customerUser
+  let licenses
 
-  if (!customerUser) {
-    redirect('/login')
+  try {
+    // Get customer's user record
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', user.email)
+      .maybeSingle()
+
+    if (!existingUser) {
+      // Create user if doesn't exist
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert({ 
+          email: user.email, 
+          full_name: user.email?.split('@')[0] || 'Customer'
+        })
+        .select()
+        .single()
+      
+      if (createError || !newUser) {
+        console.error('User creation error:', createError)
+        redirect('/login')
+      }
+      customerUser = newUser
+    } else {
+      customerUser = existingUser
+    }
+
+    // Get licenses
+    const { data: licensesData } = await supabase
+      .from('licenses')
+      .select(`
+        *,
+        products(name, description, max_accounts),
+        mt5_accounts(*)
+      `)
+      .eq('user_id', customerUser.id)
+      .order('created_at', { ascending: false })
+
+    licenses = licensesData || []
+  } catch (error) {
+    console.error('Portal data fetch error:', error)
+    licenses = []
   }
-
-  const { data: licenses } = await supabase
-    .from('licenses')
-    .select(`
-      *,
-      products(name, description, max_accounts),
-      mt5_accounts(*)
-    `)
-    .eq('user_id', customerUser.id)
-    .order('created_at', { ascending: false })
 
   const activeLicenses = licenses?.filter(l => l.status === 'active').length || 0
   const totalAccounts = licenses?.reduce((sum, l) => sum + (l.mt5_accounts?.length || 0), 0) || 0
@@ -59,7 +94,7 @@ export default async function CustomerPortalPage() {
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">Welcome back, {customerUser.full_name || 'Customer'}!</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Welcome back, {customerUser?.full_name || 'Customer'}!</h2>
           <p className="mt-2 text-gray-600">Manage your licenses and MT5 accounts</p>
         </div>
 
@@ -127,6 +162,7 @@ export default async function CustomerPortalPage() {
           {licenses && licenses.length > 0 ? (
             <div className="space-y-4">
               {licenses.map((license) => {
+                const product = Array.isArray(license.products) ? license.products[0] : license.products
                 const daysRemaining = license.expires_at 
                   ? Math.ceil((new Date(license.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
                   : null
@@ -138,7 +174,7 @@ export default async function CustomerPortalPage() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
-                          <h4 className="font-semibold text-gray-900">{license.products?.name}</h4>
+                          <h4 className="font-semibold text-gray-900">{product?.name || 'Product'}</h4>
                           <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                             license.status === 'active' 
                               ? 'bg-green-100 text-green-800' 
@@ -169,7 +205,7 @@ export default async function CustomerPortalPage() {
 
                           <div className="flex items-center gap-4 text-sm">
                             <span className="text-gray-500">
-                              MT5 Accounts: <strong>{license.mt5_accounts?.length || 0}/{license.products?.max_accounts || 3}</strong>
+                              MT5 Accounts: <strong>{license.mt5_accounts?.length || 0}/{product?.max_accounts || 3}</strong>
                             </span>
                             {daysRemaining !== null && (
                               <span className={`font-medium ${

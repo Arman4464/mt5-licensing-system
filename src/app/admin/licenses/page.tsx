@@ -9,7 +9,7 @@ import { sendLicenseCreatedEmail, sendNewAccountAlert } from '@/lib/email'
 async function generateLicense(formData: FormData) {
   'use server'
   
-  const { adminClient, user: adminUser } = await requireAdmin()
+  const { adminClient } = await requireAdmin()
   
   try {
     const productId = formData.get('product_id') as string
@@ -17,9 +17,11 @@ async function generateLicense(formData: FormData) {
     const durationDays = parseInt(formData.get('duration_days') as string)
 
     if (!productId || !userEmail || !durationDays) {
-      redirect('/admin/licenses?error=All fields are required')
+      revalidatePath('/admin/licenses')
+      return redirect('/admin/licenses?error=' + encodeURIComponent('All fields required'))
     }
 
+    // Get product
     const { data: product, error: productError } = await adminClient
       .from('products')
       .select('*')
@@ -27,44 +29,47 @@ async function generateLicense(formData: FormData) {
       .single()
 
     if (productError || !product) {
-      redirect('/admin/licenses?error=Product not found')
+      revalidatePath('/admin/licenses')
+      return redirect('/admin/licenses?error=' + encodeURIComponent('Product not found'))
     }
 
     // Generate license key
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     const licenseKey = Array.from({ length: 4 }, () => {
-      return Array.from({ length: 8 }, () => 
+      return Array.from({ length: 8 }, () =>
         chars.charAt(Math.floor(Math.random() * chars.length))
       ).join('')
     }).join('-')
 
+    // Calculate expiry
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + durationDays)
 
     // Find or create user
+    let userId
     const { data: existingUser } = await adminClient
       .from('users')
       .select('id')
       .eq('email', userEmail)
       .maybeSingle()
 
-    let userId
     if (existingUser) {
       userId = existingUser.id
     } else {
       const { data: newUser, error: userError } = await adminClient
         .from('users')
-        .insert({ 
-          email: userEmail, 
-          full_name: userEmail.split('@')[0] 
+        .insert({
+          email: userEmail,
+          full_name: userEmail.split('@')[0],
         })
         .select('id')
         .single()
 
-      if (userError) {
-        redirect('/admin/licenses?error=User creation failed: ' + encodeURIComponent(userError.message))
+      if (userError || !newUser) {
+        revalidatePath('/admin/licenses')
+        return redirect('/admin/licenses?error=' + encodeURIComponent('Failed to create user'))
       }
-      userId = newUser?.id
+      userId = newUser.id
     }
 
     // Create license
@@ -79,10 +84,12 @@ async function generateLicense(formData: FormData) {
       })
 
     if (licenseError) {
-      redirect('/admin/licenses?error=' + encodeURIComponent(licenseError.message))
+      console.error('License insert error:', licenseError)
+      revalidatePath('/admin/licenses')
+      return redirect('/admin/licenses?error=' + encodeURIComponent('Failed to create license'))
     }
 
-    // Send email to customer
+    // Try to send email (non-blocking)
     try {
       await sendLicenseCreatedEmail(
         userEmail,
@@ -90,29 +97,18 @@ async function generateLicense(formData: FormData) {
         product.name,
         expiresAt.toISOString()
       )
-      console.log('✅ License email sent to:', userEmail)
+      console.log('✅ Email sent successfully')
     } catch (emailError) {
-      console.error('❌ Email send failed:', emailError)
-      // Continue anyway - license was created
-    }
-
-    // Send notification to admin
-    try {
-      await sendNewAccountAlert(
-        adminUser.email || 'admin@mark8pips.com',
-        licenseKey,
-        0, // No account yet
-        'New License Generated'
-      )
-    } catch (emailError) {
-      console.error('Admin notification failed:', emailError)
+      console.error('❌ Email error (non-blocking):', emailError)
+      // Don't fail the request if email fails
     }
 
     revalidatePath('/admin/licenses')
-    redirect('/admin/licenses?success=License generated and emailed: ' + licenseKey)
+    return redirect('/admin/licenses?success=' + encodeURIComponent(`License generated: ${licenseKey}`))
   } catch (error) {
-    console.error('License generation error:', error)
-    redirect('/admin/licenses?error=Failed to generate license')
+    console.error('Generate license error:', error)
+    revalidatePath('/admin/licenses')
+    return redirect('/admin/licenses?error=' + encodeURIComponent('Unexpected error occurred'))
   }
 }
 
