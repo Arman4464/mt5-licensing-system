@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 
 export async function requireAdmin() {
@@ -17,5 +18,10 @@ export async function requireAdmin() {
     redirect('/dashboard?error=unauthorized')
   }
 
-  return { user, supabase }
+  // Return both regular client and admin client
+  return { 
+    user, 
+    supabase,
+    adminClient: createAdminClient()
+  }
 }

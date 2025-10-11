@@ -4,21 +4,21 @@ import { Toast } from '@/components/toast'
 import { Suspense } from 'react'
 
 export default async function AdminPage() {
-  const { user, supabase } = await requireAdmin()
+  const { user, adminClient } = await requireAdmin()
 
-  const { count: licensesCount } = await supabase
+  const { count: licensesCount } = await adminClient
     .from('licenses')
     .select('*', { count: 'exact', head: true })
 
-  const { count: accountsCount } = await supabase
+  const { count: accountsCount } = await adminClient
     .from('mt5_accounts')
     .select('*', { count: 'exact', head: true })
 
-  const { count: productsCount } = await supabase
+  const { count: productsCount } = await adminClient
     .from('products')
     .select('*', { count: 'exact', head: true })
 
-  const { data: recentLogs } = await supabase
+  const { data: recentLogs } = await adminClient
     .from('usage_logs')
     .select('*, licenses(license_key)')
     .order('created_at', { ascending: false })
@@ -34,7 +34,7 @@ export default async function AdminPage() {
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-600">
             Welcome back! Here&apos;s an overview of your licensing system.
           </p>
         </div>

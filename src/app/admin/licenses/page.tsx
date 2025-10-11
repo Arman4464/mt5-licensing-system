@@ -8,39 +8,26 @@ import { redirect } from 'next/navigation'
 async function generateLicense(formData: FormData) {
   'use server'
   
+  const { adminClient } = await requireAdmin()
+  
   try {
-    const { supabase } = await requireAdmin()
-    
     const productId = formData.get('product_id') as string
     const userEmail = formData.get('user_email') as string
     const durationDays = parseInt(formData.get('duration_days') as string)
 
-    console.log('Generating license with:', { productId, userEmail, durationDays })
-
     if (!productId || !userEmail || !durationDays) {
-      console.error('Missing fields:', { productId, userEmail, durationDays })
       redirect('/admin/licenses?error=All fields are required')
     }
 
-    // Get product
-    console.log('Fetching product...')
-    const { data: product, error: productError } = await supabase
+    const { data: product, error: productError } = await adminClient
       .from('products')
       .select('*')
       .eq('id', productId)
       .single()
 
-    if (productError) {
-      console.error('Product error:', productError)
-      redirect('/admin/licenses?error=Product error: ' + encodeURIComponent(productError.message))
-    }
-
-    if (!product) {
-      console.error('Product not found')
+    if (productError || !product) {
       redirect('/admin/licenses?error=Product not found')
     }
-
-    console.log('Product found:', product.name)
 
     // Generate license key
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -50,30 +37,21 @@ async function generateLicense(formData: FormData) {
       ).join('')
     }).join('-')
 
-    console.log('Generated key:', licenseKey)
-
     const expiresAt = new Date()
     expiresAt.setDate(expiresAt.getDate() + durationDays)
 
     // Find or create user
-    console.log('Checking for existing user...')
-    const { data: existingUser, error: existingUserError } = await supabase
+    const { data: existingUser } = await adminClient
       .from('users')
       .select('id')
       .eq('email', userEmail)
       .maybeSingle()
 
-    if (existingUserError) {
-      console.error('Error checking user:', existingUserError)
-    }
-
     let userId
     if (existingUser) {
       userId = existingUser.id
-      console.log('Using existing user:', userId)
     } else {
-      console.log('Creating new user...')
-      const { data: newUser, error: userError } = await supabase
+      const { data: newUser, error: userError } = await adminClient
         .from('users')
         .insert({ 
           email: userEmail, 
@@ -83,21 +61,13 @@ async function generateLicense(formData: FormData) {
         .single()
 
       if (userError) {
-        console.error('User creation error:', userError)
         redirect('/admin/licenses?error=User creation failed: ' + encodeURIComponent(userError.message))
       }
       userId = newUser?.id
-      console.log('Created new user:', userId)
-    }
-
-    if (!userId) {
-      console.error('No user ID obtained')
-      redirect('/admin/licenses?error=Failed to get user ID')
     }
 
     // Create license
-    console.log('Creating license...')
-    const { data: license, error: licenseError } = await supabase
+    const { error: licenseError } = await adminClient
       .from('licenses')
       .insert({
         user_id: userId,
@@ -106,35 +76,27 @@ async function generateLicense(formData: FormData) {
         status: 'active',
         expires_at: expiresAt.toISOString(),
       })
-      .select()
-      .single()
 
     if (licenseError) {
-      console.error('License creation error:', licenseError)
-      redirect('/admin/licenses?error=License creation failed: ' + encodeURIComponent(licenseError.message))
+      redirect('/admin/licenses?error=' + encodeURIComponent(licenseError.message))
     }
 
-    console.log('License created successfully:', license)
-
     revalidatePath('/admin/licenses')
-    redirect('/admin/licenses?success=License generated successfully: ' + licenseKey)
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Unexpected error in generateLicense:', error)
-    redirect('/admin/licenses?error=System error: ' + encodeURIComponent(errorMessage))
+    redirect('/admin/licenses?success=License generated: ' + licenseKey)
+  } catch (error) {
+    redirect('/admin/licenses?error=Failed to generate license')
   }
 }
-
 
 async function updateLicenseStatus(formData: FormData) {
   'use server'
   
-  const { supabase } = await requireAdmin()
+  const { adminClient } = await requireAdmin()
   
   const licenseId = formData.get('license_id') as string
   const status = formData.get('status') as string
   
-  const { error } = await supabase
+  const { error } = await adminClient
     .from('licenses')
     .update({ status })
     .eq('id', licenseId)
@@ -148,9 +110,9 @@ async function updateLicenseStatus(formData: FormData) {
 }
 
 export default async function LicensesPage() {
-  const { user, supabase } = await requireAdmin()
+  const { user, adminClient } = await requireAdmin()
 
-  const { data: licenses } = await supabase
+  const { data: licenses } = await adminClient
     .from('licenses')
     .select(`
       *,
@@ -159,10 +121,9 @@ export default async function LicensesPage() {
     `)
     .order('created_at', { ascending: false })
 
-  // Get MT5 accounts count for each license
   const licensesWithCounts = await Promise.all(
     (licenses || []).map(async (license) => {
-      const { count } = await supabase
+      const { count } = await adminClient
         .from('mt5_accounts')
         .select('*', { count: 'exact', head: true })
         .eq('license_id', license.id)
@@ -171,7 +132,7 @@ export default async function LicensesPage() {
     })
   )
 
-  const { data: products } = await supabase
+  const { data: products } = await adminClient
     .from('products')
     .select('*')
     .order('name', { ascending: true })
@@ -318,12 +279,18 @@ export default async function LicensesPage() {
                           : 'Never'}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
-                        <form action={updateLicenseStatus} className="inline">
+                        <form action={updateLicenseStatus}>
                           <input type="hidden" name="license_id" value={license.id} />
                           <select
                             name="status"
                             defaultValue={license.status}
-                            onChange={(e) => e.target.form?.requestSubmit()}
+                            onChange={(e) => {
+                              const form = e.target.closest('form')
+                              if (form) {
+                                const formData = new FormData(form)
+                                form.requestSubmit()
+                              }
+                            }}
                             className="rounded border-gray-300 text-xs focus:border-blue-500 focus:ring-blue-500"
                           >
                             <option value="active">Active</option>

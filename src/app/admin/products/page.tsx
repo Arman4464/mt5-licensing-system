@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation'
 async function createProduct(formData: FormData) {
   'use server'
   
-  const { supabase } = await requireAdmin()
+  const { adminClient } = await requireAdmin()
   
   try {
     const name = formData.get('name') as string
@@ -21,7 +21,7 @@ async function createProduct(formData: FormData) {
       redirect('/admin/products?error=All fields are required')
     }
 
-    const { error } = await supabase.from('products').insert({
+    const { error } = await adminClient.from('products').insert({
       name,
       description,
       price,
@@ -45,11 +45,11 @@ async function createProduct(formData: FormData) {
 async function deleteProduct(formData: FormData) {
   'use server'
   
-  const { supabase } = await requireAdmin()
+  const { adminClient } = await requireAdmin()
   
   const productId = formData.get('product_id') as string
   
-  const { error } = await supabase
+  const { error } = await adminClient
     .from('products')
     .delete()
     .eq('id', productId)
@@ -63,9 +63,9 @@ async function deleteProduct(formData: FormData) {
 }
 
 export default async function ProductsPage() {
-  const { user, supabase } = await requireAdmin()
+  const { user, adminClient } = await requireAdmin()
 
-  const { data: products } = await supabase
+  const { data: products } = await adminClient
     .from('products')
     .select('*')
     .order('created_at', { ascending: false })
@@ -191,11 +191,6 @@ export default async function ProductsPage() {
                       <button
                         type="submit"
                         className="text-red-600 hover:text-red-800 text-sm"
-                        onClick={(e) => {
-                          if (!confirm('Are you sure you want to delete this product?')) {
-                            e.preventDefault()
-                          }
-                        }}
                       >
                         Delete
                       </button>
