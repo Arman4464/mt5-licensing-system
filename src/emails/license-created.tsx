@@ -52,8 +52,8 @@ export default function LicenseCreatedEmail({
             <Heading style={h2}>📥 Installation Steps</Heading>
             <Text style={listItem}>1. Open MetaTrader 5</Text>
             <Text style={listItem}>2. Go to Tools → Options → Expert Advisors</Text>
-            <Text style={listItem}>3. Enable "Allow WebRequest for listed URL"</Text>
-            <Text style={listItem}>4. Add: &ldquo;https://mark8pips.vercel.app&rdquo;</Text>
+            <Text style={listItem}>3. Enable &ldquo;Allow WebRequest for listed URL&rdquo;</Text>
+            <Text style={listItem}>4. Add: https://mark8pips.vercel.app</Text>
             <Text style={listItem}>5. Install the EA and enter your license key</Text>
           </Section>
 
