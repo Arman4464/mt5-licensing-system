@@ -4,7 +4,7 @@ import { Toast } from '@/components/toast'
 import { Suspense } from 'react'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { sendLicenseCreatedEmail, sendNewAccountAlert } from '@/lib/email'
+import { sendLicenseCreatedEmail } from '@/lib/email'
 
 async function generateLicense(formData: FormData) {
   'use server'

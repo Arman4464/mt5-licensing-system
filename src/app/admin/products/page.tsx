@@ -17,7 +17,7 @@ async function createProduct(formData: FormData) {
   const maxAccounts = parseInt(formData.get('max_accounts') as string)
 
   try {
-    const { error } = await adminClient
+    const { error: insertError } = await adminClient
       .from('products')
       .insert({
         name,
@@ -27,11 +27,12 @@ async function createProduct(formData: FormData) {
         max_accounts: maxAccounts,
       })
 
-    if (error) throw error
+    if (insertError) throw insertError
     
     revalidatePath('/admin/products')
     return redirect('/admin/products?success=' + encodeURIComponent('Product created successfully'))
-  } catch (error) {
+  } catch (err) {
+    console.error('Product creation error:', err)
     revalidatePath('/admin/products')
     return redirect('/admin/products?error=' + encodeURIComponent('Failed to create product'))
   }
@@ -41,20 +42,23 @@ async function deleteProduct(formData: FormData) {
   'use server'
   
   const { adminClient } = await requireAdmin()
-  
-  const productId = formData.get('product_id') as string
-  
-  const { error } = await adminClient
-    .from('products')
-    .delete()
-    .eq('id', productId)
+  const id = formData.get('id') as string
 
-  if (error) {
-    redirect('/admin/products?error=' + encodeURIComponent(error.message))
+  try {
+    const { error: deleteError } = await adminClient
+      .from('products')
+      .delete()
+      .eq('id', id)
+
+    if (deleteError) throw deleteError
+
+    revalidatePath('/admin/products')
+    return redirect('/admin/products?success=' + encodeURIComponent('Product deleted successfully'))
+  } catch (err) {
+    console.error('Product deletion error:', err)
+    revalidatePath('/admin/products')
+    return redirect('/admin/products?error=' + encodeURIComponent('Failed to delete product'))
   }
-
-  revalidatePath('/admin/products')
-  redirect('/admin/products?success=Product deleted successfully')
 }
 
 export default async function ProductsPage() {
@@ -66,26 +70,29 @@ export default async function ProductsPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-50">
       <AdminNav userEmail={user.email || ''} />
       <Suspense>
         <Toast />
       </Suspense>
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Products Management</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Create and manage your MT5 EA products and indicators.
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Products</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              Manage your MT5 EA products and pricing
+            </p>
+          </div>
         </div>
 
+        {/* Create Product Form */}
         <div className="mb-8 rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Create New Product</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">Create New Product</h2>
           <form action={createProduct} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700">
                   Product Name *
                 </label>
                 <input
@@ -93,76 +100,75 @@ export default async function ProductsPage() {
                   id="name"
                   name="name"
                   required
-                  className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="e.g., Scalping EA Pro"
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2"
+                  placeholder="MT5 Gold Scalper EA"
                 />
               </div>
-              
+
               <div>
-                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                  Price (USD) *
+                <label htmlFor="price" className="mb-1 block text-sm font-medium text-gray-700">
+                  Price (₹) *
                 </label>
                 <input
                   type="number"
                   id="price"
                   name="price"
-                  step="0.01"
-                  min="0"
                   required
-                  className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="99.99"
+                  min="0"
+                  step="0.01"
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2"
+                  placeholder="4999"
                 />
               </div>
-              
+
               <div>
-                <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="license_duration_days" className="mb-1 block text-sm font-medium text-gray-700">
                   License Duration (days) *
                 </label>
                 <input
                   type="number"
-                  id="duration"
-                  name="duration"
-                  min="1"
+                  id="license_duration_days"
+                  name="license_duration_days"
                   required
-                  className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  min="1"
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2"
                   placeholder="365"
                 />
               </div>
-              
+
               <div>
-                <label htmlFor="max_accounts" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="max_accounts" className="mb-1 block text-sm font-medium text-gray-700">
                   Max MT5 Accounts *
                 </label>
                 <input
                   type="number"
                   id="max_accounts"
                   name="max_accounts"
-                  min="1"
-                  max="10"
                   required
-                  className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  min="1"
+                  className="block w-full rounded-md border border-gray-300 px-3 py-2"
                   placeholder="3"
                 />
               </div>
             </div>
-            
+
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="description" className="mb-1 block text-sm font-medium text-gray-700">
                 Description
               </label>
               <textarea
                 id="description"
                 name="description"
                 rows={3}
-                className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                placeholder="Describe your product features and benefits..."
+                className="block w-full rounded-md border border-gray-300 px-3 py-2"
+                placeholder="Professional gold scalping algorithm for MT5"
               />
             </div>
-            
+
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
               >
                 Create Product
               </button>
@@ -170,71 +176,86 @@ export default async function ProductsPage() {
           </form>
         </div>
 
-        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Existing Products</h2>
-          {products && products.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-semibold text-gray-900">{product.name}</h3>
-                    <form action={deleteProduct}>
-                      <input type="hidden" name="product_id" value={product.id} />
-                      <button
-                        type="submit"
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Delete
-                      </button>
-                    </form>
-                  </div>
-                  <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-                    {product.description || 'No description provided'}
-                  </p>
-                  <div className="mt-4 space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Price:</span>
-                      <span className="font-semibold text-gray-900">${product.price}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Duration:</span>
-                      <span className="font-medium text-gray-900">{product.license_duration_days} days</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Max Accounts:</span>
-                      <span className="font-medium text-gray-900">{product.max_accounts}</span>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <span className="text-xs text-gray-500">
-                      Created {new Date(product.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No products yet</h3>
-              <p className="mt-1 text-sm text-gray-500">Get started by creating a new product above.</p>
-            </div>
-          )}
+        {/* Products List */}
+        <div className="rounded-lg bg-white shadow-sm ring-1 ring-gray-200">
+          <div className="p-6">
+            <h2 className="mb-4 text-lg font-semibold text-gray-900">Existing Products</h2>
+            
+            {products && products.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                        Product Name
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                        Price
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                        Duration
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                        Max Accounts
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                        Created
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {products.map((product) => (
+                      <tr key={product.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                          {product.description && (
+                            <div className="text-xs text-gray-500">{product.description}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          ₹{product.price.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {product.license_duration_days} days
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {product.max_accounts}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
+                          {new Date(product.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <form action={deleteProduct}>
+                            <input type="hidden" name="id" value={product.id} />
+                            <button
+                              type="submit"
+                              onClick={(e) => {
+                                if (!confirm('Are you sure? This will affect existing licenses.')) {
+                                  e.preventDefault()
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700 text-sm"
+                            >
+                              Delete
+                            </button>
+                          </form>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-4xl mb-4">📦</div>
+                <h3 className="text-lg font-medium text-gray-900">No products yet</h3>
+                <p className="mt-2 text-gray-600">Create your first product to get started</p>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>
