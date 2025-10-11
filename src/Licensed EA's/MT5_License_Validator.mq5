@@ -1,241 +1,233 @@
 //+------------------------------------------------------------------+
-//|                                   MT5_License_System_Pro.mq5     |
-//|                                    Industry-Level Licensing      |
+//|                                        EA_License_Validator.mq5 |
+//|                                                      Mark8Pips   |
 //+------------------------------------------------------------------+
-#property copyright "MT5 License Pro"
+#property copyright "Mark8Pips"
 #property link      "https://mark8pips.vercel.app"
-#property version   "2.00"
+#property version   "1.00"
 #property strict
 
-//--- Input parameters
-input string LICENSE_KEY = "";  // Your License Key
-input bool SHOW_DASHBOARD = true;  // Show License Dashboard
+input string LicenseKey = "U43NMO4G-KVQFTVO0-9XNY80IE-60N6SAP8"; // Your License Key
+string API_URL = "https://mark8pips.vercel.app/api/license/validate";
 
-//--- Global variables
-string g_api_url = "https://mark8pips.vercel.app/api/license/validate";
-bool g_license_valid = false;
-datetime g_last_check = 0;
-int g_check_interval = 3600;  // Recheck every hour
-string g_product_name = "";
-datetime g_license_expires = 0;
-int g_accounts_used = 0;
-int g_max_accounts = 0;
-int g_days_remaining = 0;
+bool LicenseValid = false;
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
 {
-   if(LICENSE_KEY == "" || StringLen(LICENSE_KEY) < 10)
+   Print("===========================================");
+   Print("MT5 License Validator - Initializing...");
+   Print("===========================================");
+   
+   if(StringLen(LicenseKey) == 0)
    {
-      Alert("ERROR: Please enter your license key in EA settings!");
-      ShowLicenseError("No License Key");
+      Alert("⚠️ ERROR: Please enter your license key in EA settings!");
+      Comment("❌ License Key Required!\nRight-click EA → Properties → Inputs");
       return(INIT_FAILED);
    }
    
-   Print("=== MT5 License System Pro v2.0 ===");
-   Print("Validating license...");
+   Print("License Key: ", LicenseKey);
+   Print("API URL: ", API_URL);
    
+   // Validate license
    if(!ValidateLicense())
    {
-      Alert("LICENSE VALIDATION FAILED! Contact support.");
-      ShowLicenseError("Validation Failed");
+      Alert("❌ License validation FAILED! EA will not trade.");
+      Comment("❌ Invalid License\nCheck your license key and internet connection");
       return(INIT_FAILED);
    }
    
-   Print("✓ License validated successfully!");
-   Print("✓ Product: ", g_product_name);
-   Print("✓ Expires in: ", g_days_remaining, " days");
-   Print("✓ Accounts used: ", g_accounts_used, "/", g_max_accounts);
-   
-   if(SHOW_DASHBOARD)
-   {
-      ShowLicenseDashboard();
-   }
+   LicenseValid = true;
+   Comment("✅ License Active\nTrading Enabled");
+   Print("✅ ✅ ✅ LICENSE VALIDATED SUCCESSFULLY ✅ ✅ ✅");
    
    return(INIT_SUCCEEDED);
 }
 
 //+------------------------------------------------------------------+
-//| Enhanced license validation                                      |
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+   Comment("");
+}
+
+//+------------------------------------------------------------------+
+//| License Validation Function                                      |
 //+------------------------------------------------------------------+
 bool ValidateLicense()
 {
-   if(g_license_valid && (TimeCurrent() - g_last_check) < g_check_interval)
-   {
-      return true;
-   }
+   Print("-------------------------------------------");
+   Print("Starting License Validation...");
+   Print("-------------------------------------------");
    
-   string headers = "Content-Type: application/json\r\n";
-   char post_data[];
-   char result_data[];
-   string result_headers;
+   // Get account info
+   long accountNumber = AccountInfoInteger(ACCOUNT_LOGIN);
+   string serverName = AccountInfoString(ACCOUNT_SERVER);
+   string accountName = AccountInfoString(ACCOUNT_NAME);
+   string company = AccountInfoString(ACCOUNT_COMPANY);
    
-   // Collect comprehensive system information
-   long account_number = AccountInfoInteger(ACCOUNT_LOGIN);
-   string account_name = AccountInfoString(ACCOUNT_NAME);
-   string broker_server = AccountInfoString(ACCOUNT_SERVER);
-   string broker_company = AccountInfoString(ACCOUNT_COMPANY);
-   string terminal_name = TerminalInfoString(TERMINAL_NAME);
-   string terminal_company = TerminalInfoString(TERMINAL_COMPANY);
-   int terminal_build = TerminalInfoInteger(TERMINAL_BUILD);
-   string computer_name = TerminalInfoString(TERMINAL_PATH);
+   Print("Account Number: ", accountNumber);
+   Print("Server: ", serverName);
+   Print("Account Name: ", accountName);
+   Print("Company: ", company);
    
-   // Create enhanced JSON payload
-   string json = StringFormat(
-      "{\"license_key\":\"%s\",\"account_number\":%d,\"account_name\":\"%s\",\"broker_server\":\"%s\",\"broker_company\":\"%s\",\"ip_address\":\"AUTO\",\"terminal_name\":\"%s\",\"terminal_build\":%d,\"terminal_company\":\"%s\",\"computer_name\":\"%s\",\"os_version\":\"Windows\"}",
-      LICENSE_KEY,
-      account_number,
-      account_name,
-      broker_server,
-      broker_company,
-      terminal_name,
-      terminal_build,
-      terminal_company,
-      computer_name
+   // Build JSON request
+   string jsonData = StringFormat(
+      "{\"license_key\":\"%s\",\"account_number\":%I64d,\"broker_server\":\"%s\",\"account_name\":\"%s\",\"broker_company\":\"%s\"}",
+      LicenseKey,
+      accountNumber,
+      serverName,
+      accountName,
+      company
    );
    
-   StringToCharArray(json, post_data, 0, WHOLE_ARRAY, CP_UTF8);
-   ArrayResize(post_data, ArraySize(post_data) - 1);
+   Print("JSON Payload: ", jsonData);
    
+   // Convert to char array
+   char post[];
+   char result[];
+   string resultHeaders;
+   
+   StringToCharArray(jsonData, post, 0, WHOLE_ARRAY, CP_UTF8);
+   ArrayResize(post, ArraySize(post) - 1); // Remove null terminator
+   
+   // Headers
+   string headers = "Content-Type: application/json\r\n";
+   
+   // Reset last error
    ResetLastError();
-   int timeout = 5000;
-   int http_code = WebRequest(
+   
+   Print("Sending WebRequest to: ", API_URL);
+   Print("Timeout: 10000ms");
+   
+   // Make request
+   int timeout = 10000;
+   int httpCode = WebRequest(
       "POST",
-      g_api_url,
+      API_URL,
       headers,
       timeout,
-      post_data,
-      result_data,
-      result_headers
+      post,
+      result,
+      resultHeaders
    );
    
-   if(http_code == -1)
+   // Check for errors
+   if(httpCode == -1)
    {
       int error = GetLastError();
-      Print("WebRequest Error: ", error);
-      Print("Add to allowed URLs: https://mark8pips.vercel.app");
+      Print("❌ WebRequest FAILED with error: ", error);
       
-      // Grace period for temporary offline
-      if(g_license_valid && (TimeCurrent() - g_last_check) < 86400)
+      switch(error)
       {
-         Print("Using cached validation (grace period)");
-         return true;
+         case 4014:
+            Print("❌ ERROR 4014: URL not allowed in WebRequest");
+            Print("📋 SOLUTION:");
+            Print("1. Go to: Tools → Options → Expert Advisors");
+            Print("2. Enable 'Allow WebRequest for listed URL'");
+            Print("3. Click 'Add' and enter EXACTLY:");
+            Print("   https://mark8pips.vercel.app");
+            Print("4. Click OK and restart MT5");
+            Print("5. Remove and re-attach the EA to chart");
+            break;
+            
+         case 5203:
+            Print("❌ ERROR 5203: Invalid URL format");
+            Print("Check API_URL in EA code");
+            break;
+            
+         case 4060:
+            Print("❌ ERROR 4060: Function not allowed");
+            Print("Enable WebRequest in EA settings");
+            break;
+            
+         default:
+            Print("❌ Unknown error: ", error);
+            Print("Check your internet connection");
+            break;
       }
       
       return false;
    }
    
-   string response = CharArrayToString(result_data, 0, WHOLE_ARRAY, CP_UTF8);
-   Print("License Server Response (", http_code, ")");
+   Print("HTTP Response Code: ", httpCode);
    
-   if(http_code == 200 && StringFind(response, "\"valid\":true") >= 0)
+   // Check HTTP code
+   if(httpCode != 200 && httpCode != 201)
    {
-      g_license_valid = true;
-      g_last_check = TimeCurrent();
+      Print("❌ HTTP Error: ", httpCode);
       
-      // Parse response data
-      ParseLicenseResponse(response);
-      
+      if(httpCode == 404)
+         Print("❌ API endpoint not found. Check API_URL");
+      else if(httpCode == 403)
+         Print("❌ License key invalid or expired");
+      else if(httpCode == 429)
+         Print("❌ Too many requests. Wait 1 minute");
+      else if(httpCode >= 500)
+         Print("❌ Server error. Try again later");
+         
+      return false;
+   }
+   
+   // Parse response
+   string response = CharArrayToString(result, 0, WHOLE_ARRAY, CP_UTF8);
+   Print("📡 API Response: ", response);
+   
+   // Simple JSON parsing - check for "valid":true
+   if(StringFind(response, "\"valid\":true") != -1)
+   {
+      Print("✅ License validation SUCCESS!");
+      Print("✅ Product: ", ExtractJSONValue(response, "product_name"));
+      Print("✅ Days Remaining: ", ExtractJSONValue(response, "days_remaining"));
+      Print("✅ Accounts Used: ", ExtractJSONValue(response, "accounts_used"));
       return true;
    }
    else
    {
-      Print("Validation failed: ", response);
-      g_license_valid = false;
+      Print("❌ License validation FAILED");
+      string message = ExtractJSONValue(response, "message");
+      if(StringLen(message) > 0)
+      {
+         Print("❌ Reason: ", message);
+         Alert("License Error: " + message);
+      }
       return false;
    }
 }
 
 //+------------------------------------------------------------------+
-//| Parse license validation response                                |
+//| Extract value from JSON string (simple implementation)            |
 //+------------------------------------------------------------------+
-void ParseLicenseResponse(string response)
+string ExtractJSONValue(string json, string key)
 {
-   // Extract product name
-   int pos = StringFind(response, "\"product_name\":\"");
-   if(pos >= 0)
+   string searchKey = "\"" + key + "\":";
+   int startPos = StringFind(json, searchKey);
+   
+   if(startPos == -1)
+      return "";
+   
+   startPos += StringLen(searchKey);
+   
+   // Skip whitespace and quotes
+   while(startPos < StringLen(json) && 
+         (StringGetCharacter(json, startPos) == ' ' || 
+          StringGetCharacter(json, startPos) == '"'))
+      startPos++;
+   
+   // Find end (comma, quote, or brace)
+   int endPos = startPos;
+   while(endPos < StringLen(json))
    {
-      pos += 16;
-      int end = StringFind(response, "\"", pos);
-      g_product_name = StringSubstr(response, pos, end - pos);
+      ushort ch = StringGetCharacter(json, endPos);
+      if(ch == ',' || ch == '"' || ch == '}' || ch == ']')
+         break;
+      endPos++;
    }
    
-   // Extract days remaining
-   pos = StringFind(response, "\"days_remaining\":");
-   if(pos >= 0)
-   {
-      pos += 17;
-      int end = StringFind(response, ",", pos);
-      if(end < 0) end = StringFind(response, "}", pos);
-      string days_str = StringSubstr(response, pos, end - pos);
-      g_days_remaining = (int)StringToInteger(days_str);
-   }
-   
-   // Extract accounts used
-   pos = StringFind(response, "\"accounts_used\":");
-   if(pos >= 0)
-   {
-      pos += 16;
-      int end = StringFind(response, ",", pos);
-      string acc_str = StringSubstr(response, pos, end - pos);
-      g_accounts_used = (int)StringToInteger(acc_str);
-   }
-   
-   // Extract max accounts
-   pos = StringFind(response, "\"max_accounts\":");
-   if(pos >= 0)
-   {
-      pos += 15;
-      int end = StringFind(response, ",", pos);
-      if(end < 0) end = StringFind(response, "}", pos);
-      string max_str = StringSubstr(response, pos, end - pos);
-      g_max_accounts = (int)StringToInteger(max_str);
-   }
-}
-
-//+------------------------------------------------------------------+
-//| Show license dashboard on chart                                  |
-//+------------------------------------------------------------------+
-void ShowLicenseDashboard()
-{
-   string dashboard = StringFormat(
-      "╔═══════════════════════════════════╗\n" +
-      "║     LICENSE INFORMATION           ║\n" +
-      "╠═══════════════════════════════════╣\n" +
-      "║ Product: %-24s ║\n" +
-      "║ Status: ✓ ACTIVE                  ║\n" +
-      "║ Expires in: %3d days              ║\n" +
-      "║ Accounts: %d / %d                   ║\n" +
-      "║ Account: %-24d ║\n" +
-      "╚═══════════════════════════════════╝",
-      g_product_name,
-      g_days_remaining,
-      g_accounts_used,
-      g_max_accounts,
-      AccountInfoInteger(ACCOUNT_LOGIN)
-   );
-   
-   Comment(dashboard);
-}
-
-//+------------------------------------------------------------------+
-//| Show license error                                               |
-//+------------------------------------------------------------------+
-void ShowLicenseError(string error_msg)
-{
-   string error_display = StringFormat(
-      "╔═══════════════════════════════════╗\n" +
-      "║     LICENSE ERROR                 ║\n" +
-      "╠═══════════════════════════════════╣\n" +
-      "║ %s\n" +
-      "║ Contact: support@yoursite.com     ║\n" +
-      "╚═══════════════════════════════════╝",
-      error_msg
-   );
-   
-   Comment(error_display);
+   return StringSubstr(json, startPos, endPos - startPos);
 }
 
 //+------------------------------------------------------------------+
@@ -243,41 +235,15 @@ void ShowLicenseError(string error_msg)
 //+------------------------------------------------------------------+
 void OnTick()
 {
-   if(!ValidateLicense())
+   if(!LicenseValid)
    {
-      Alert("LICENSE VALIDATION FAILED!");
-      ShowLicenseError("Validation Failed");
-      ExpertRemove();
+      Comment("❌ License Invalid\nEA Disabled");
       return;
    }
    
-   // Warning if license expires soon
-   if(g_days_remaining <= 7 && g_days_remaining > 0)
-   {
-      static datetime last_warning = 0;
-      if(TimeCurrent() - last_warning > 3600) // Once per hour
-      {
-         Alert("LICENSE WARNING: Only ", g_days_remaining, " days remaining!");
-         last_warning = TimeCurrent();
-      }
-   }
+   // Your trading logic here
+   // EA will only reach this point if license is valid
    
-   if(SHOW_DASHBOARD)
-   {
-      ShowLicenseDashboard();
-   }
-   
-   //--- YOUR TRADING LOGIC HERE ---
-   // Add your EA strategy code below this line
-   
-}
-
-//+------------------------------------------------------------------+
-//| Expert deinitialization                                          |
-//+------------------------------------------------------------------+
-void OnDeinit(const int reason)
-{
-   Comment("");
-   Print("EA stopped. Reason: ", reason);
+   Comment("✅ License Active\nEA Running...");
 }
 //+------------------------------------------------------------------+
