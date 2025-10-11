@@ -12,7 +12,7 @@ export async function sendLicenseCreatedEmail(
   expiresAt: string
 ) {
   try {
-    const emailHtml = render(
+    const emailHtml = await render(
       LicenseCreatedEmail({
         licenseKey,
         productName,
@@ -48,7 +48,7 @@ export async function sendLicenseExpiringEmail(
   daysRemaining: number
 ) {
   try {
-    const emailHtml = render(
+    const emailHtml = await render(
       LicenseExpiringEmail({
         licenseKey,
         productName,
