@@ -4,11 +4,12 @@ import { Toast } from '@/components/toast'
 import { Suspense } from 'react'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { sendLicenseCreatedEmail, sendNewAccountAlert } from '@/lib/email'
 
 async function generateLicense(formData: FormData) {
   'use server'
   
-  const { adminClient } = await requireAdmin()
+  const { adminClient, user: adminUser } = await requireAdmin()
   
   try {
     const productId = formData.get('product_id') as string
@@ -81,9 +82,36 @@ async function generateLicense(formData: FormData) {
       redirect('/admin/licenses?error=' + encodeURIComponent(licenseError.message))
     }
 
+    // Send email to customer
+    try {
+      await sendLicenseCreatedEmail(
+        userEmail,
+        licenseKey,
+        product.name,
+        expiresAt.toISOString()
+      )
+      console.log('✅ License email sent to:', userEmail)
+    } catch (emailError) {
+      console.error('❌ Email send failed:', emailError)
+      // Continue anyway - license was created
+    }
+
+    // Send notification to admin
+    try {
+      await sendNewAccountAlert(
+        adminUser.email || 'admin@mark8pips.com',
+        licenseKey,
+        0, // No account yet
+        'New License Generated'
+      )
+    } catch (emailError) {
+      console.error('Admin notification failed:', emailError)
+    }
+
     revalidatePath('/admin/licenses')
-    redirect('/admin/licenses?success=License generated: ' + licenseKey)
+    redirect('/admin/licenses?success=License generated and emailed: ' + licenseKey)
   } catch (error) {
+    console.error('License generation error:', error)
     redirect('/admin/licenses?error=Failed to generate license')
   }
 }
@@ -211,7 +239,7 @@ export default async function LicensesPage() {
                 type="submit"
                 className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
-                Generate License Key
+                📧 Generate & Email License
               </button>
             </div>
           </form>
