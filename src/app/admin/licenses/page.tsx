@@ -279,24 +279,23 @@ export default async function LicensesPage() {
                           : 'Never'}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
-                        <form action={updateLicenseStatus}>
+                        <form action={updateLicenseStatus} className="flex items-center gap-2">
                           <input type="hidden" name="license_id" value={license.id} />
                           <select
                             name="status"
                             defaultValue={license.status}
-                            onChange={(e) => {
-                              const form = e.target.closest('form')
-                              if (form) {
-                                const formData = new FormData(form)
-                                form.requestSubmit()
-                              }
-                            }}
                             className="rounded border-gray-300 text-xs focus:border-blue-500 focus:ring-blue-500"
                           >
                             <option value="active">Active</option>
                             <option value="suspended">Suspended</option>
                             <option value="expired">Expired</option>
                           </select>
+                          <button
+                            type="submit"
+                            className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
+                          >
+                            Update
+                          </button>
                         </form>
                       </td>
                     </tr>
