@@ -34,8 +34,8 @@ export default async function AdminPage() {
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Welcome back! Here's an overview of your licensing system.
+            <p className="mt-2 text-sm text-gray-600">
+            Welcome back! Here&apos;s an overview of your licensing system.
           </p>
         </div>
 
