@@ -7,12 +7,17 @@ const INSTAMOJO_ENDPOINT = process.env.NODE_ENV === 'production'
   ? 'https://www.instamojo.com/api/1.1/'
   : 'https://test.instamojo.com/api/1.1/'
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
 export async function POST(request: Request) {
   try {
-    const { product_id, user_email } = await request.json()
+    const { product_id, buyer_name, buyer_email, buyer_phone } = await request.json()
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    if (!product_id || !buyer_name || !buyer_email || !buyer_phone) {
+      return NextResponse.json({ error: 'All fields are required' }, { status: 400 })
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Get product details
@@ -26,38 +31,80 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
+    // Find or create user
+    let userId
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', buyer_email)
+      .maybeSingle()
+
+    if (existingUser) {
+      userId = existingUser.id
+    } else {
+      const { data: newUser } = await supabase
+        .from('users')
+        .insert({
+          email: buyer_email,
+          full_name: buyer_name,
+        })
+        .select('id')
+        .single()
+      userId = newUser?.id
+    }
+
     // Create Instamojo payment request
-    const paymentData = {
+    const paymentData = new URLSearchParams({
       purpose: `${product.name} License`,
-      amount: product.price,
-      buyer_name: user_email.split('@')[0],
-      email: user_email,
+      amount: product.price.toString(),
+      buyer_name: buyer_name,
+      email: buyer_email,
+      phone: buyer_phone,
       redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
       webhook: `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/webhook`,
-      send_email: true,
-      send_sms: false,
-      allow_repeated_payments: false,
-    }
+      send_email: 'True',
+      send_sms: 'False',
+      allow_repeated_payments: 'False',
+    })
 
     const response = await fetch(`${INSTAMOJO_ENDPOINT}payment-requests/`, {
       method: 'POST',
       headers: {
         'X-Api-Key': INSTAMOJO_API_KEY,
         'X-Auth-Token': INSTAMOJO_AUTH_TOKEN,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify(paymentData),
+      body: paymentData.toString(),
     })
 
     const result = await response.json()
 
     if (!result.success) {
-      return NextResponse.json({ error: result.message }, { status: 400 })
+      console.error('Instamojo error:', result)
+      return NextResponse.json({ error: result.message || 'Payment creation failed' }, { status: 400 })
     }
+
+    // Store order in database
+    await supabase.from('orders').insert({
+      user_id: userId,
+      product_id: product_id,
+      payment_request_id: result.payment_request.id,
+      amount: product.price,
+      buyer_email: buyer_email,
+      buyer_name: buyer_name,
+      buyer_phone: buyer_phone,
+      payment_url: result.payment_request.longurl,
+      status: 'pending',
+      metadata: {
+        product_name: product.name,
+        license_duration_days: product.license_duration_days,
+        max_accounts: product.max_accounts,
+      },
+    })
 
     return NextResponse.json({
       payment_url: result.payment_request.longurl,
-      payment_id: result.payment_request.id,
+      payment_request_id: result.payment_request.id,
     })
   } catch (error) {
     console.error('Payment creation error:', error)
