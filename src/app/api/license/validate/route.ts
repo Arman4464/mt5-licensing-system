@@ -90,7 +90,8 @@ export async function POST(request: Request) {
 
     // Check account limit
     if (!accountExists) {
-      const maxAccounts = license.products?.max_accounts || 3
+      const product = Array.isArray(license.products) ? license.products[0] : license.products
+      const maxAccounts = product?.max_accounts || 3
       const currentAccounts = existingAccounts?.length || 0
       
       if (currentAccounts >= maxAccounts) {
@@ -152,15 +153,17 @@ export async function POST(request: Request) {
       ? Math.ceil((new Date(license.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
       : 999
 
+    const product = Array.isArray(license.products) ? license.products[0] : license.products
+
     console.log('Validation successful:', { license_key, accounts_used: accountsUsed })
 
     return NextResponse.json({
       valid: true,
       message: 'License validated successfully',
-      product_name: license.products?.name || 'Unknown',
+      product_name: product?.name || 'Unknown',
       expires_at: license.expires_at,
       accounts_used: accountsUsed,
-      max_accounts: license.products?.max_accounts || 3,
+      max_accounts: product?.max_accounts || 3,
       days_remaining: daysRemaining
     }, {
       status: 200,
