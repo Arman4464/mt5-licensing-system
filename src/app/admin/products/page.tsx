@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/utils/admin'
 import { AdminNav } from '@/components/admin-nav'
 import { Toast } from '@/components/toast'
+import { DeleteProductButton } from '@/components/delete-product-button'
 import { Suspense } from 'react'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -228,20 +229,7 @@ export default async function ProductsPage() {
                           {new Date(product.created_at).toLocaleDateString()}
                         </td>
                         <td className="px-4 py-3">
-                          <form action={deleteProduct}>
-                            <input type="hidden" name="id" value={product.id} />
-                            <button
-                              type="submit"
-                              onClick={(e) => {
-                                if (!confirm('Are you sure? This will affect existing licenses.')) {
-                                  e.preventDefault()
-                                }
-                              }}
-                              className="text-red-600 hover:text-red-700 text-sm"
-                            >
-                              Delete
-                            </button>
-                          </form>
+                          <DeleteProductButton productId={product.id} onDelete={deleteProduct} />
                         </td>
                       </tr>
                     ))}

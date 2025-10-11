@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
+import { CopyLicenseButton } from '@/components/copy-license-button'
+
 
 export default async function CustomerPortalPage() {
   const supabase = await createClient()
@@ -192,15 +194,7 @@ export default async function CustomerPortalPage() {
                             <code className="rounded bg-gray-100 px-2 py-1 font-mono text-xs text-gray-900">
                               {license.license_key}
                             </code>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(license.license_key)
-                                alert('License key copied!')
-                              }}
-                              className="text-blue-600 hover:text-blue-700"
-                            >
-                              📋 Copy
-                            </button>
+                            <CopyLicenseButton licenseKey={license.license_key} />
                           </div>
 
                           <div className="flex items-center gap-4 text-sm">
