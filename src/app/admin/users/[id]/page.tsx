@@ -171,7 +171,7 @@ export default async function UserDetailPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {user.licenses && user.licenses.some((l: License) => l.mt5_accounts?.length > 0) ? (
+            {user.licenses && user.licenses.some((l: License) => Array.isArray(l.mt5_accounts) && l.mt5_accounts.length > 0) ? (
               <div className="space-y-3">
                 {user.licenses.map((license: License) => 
                   license.mt5_accounts?.map((account: MT5Account) => (
