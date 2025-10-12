@@ -73,6 +73,22 @@ async function generateLicense(formData: FormData) {
 
     console.log('[LICENSE-GENERATE] Product found:', product.name)
 
+    // Get global max_accounts setting
+    const { data: settings } = await adminClient
+      .from('global_settings')
+      .select('value')
+      .eq('key', 'max_accounts')
+      .single()
+
+    const maxAccounts = settings?.value ? parseInt(settings.value) : 3
+    console.log('[LICENSE-GENERATE] Max accounts from global settings:', maxAccounts)
+
+    // Update product's max_accounts to match global setting
+    await adminClient
+      .from('products')
+      .update({ max_accounts: maxAccounts })
+      .eq('id', productId)
+
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
     const licenseKey = Array.from({ length: 4 }, () => {
       return Array.from({ length: 8 }, () =>
@@ -153,6 +169,7 @@ async function generateLicense(formData: FormData) {
     return redirect('/admin/licenses?error=' + encodeURIComponent('Unexpected error occurred'))
   }
 }
+
 
 async function pauseLicense(formData: FormData) {
   'use server'

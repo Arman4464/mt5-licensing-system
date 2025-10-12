@@ -20,6 +20,7 @@ import {
   Users,
   BarChart3,
   Settings,
+  Folder, // ADD THIS
   Moon,
   Sun,
   LogOut,
@@ -36,9 +37,10 @@ const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Licenses', href: '/admin/licenses', icon: Key },
   { name: 'Products', href: '/admin/products', icon: Package },
+  { name: 'Categories', href: '/admin/categories', icon: Folder }, // ADD THIS
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
-  { name: 'Batch Ops', href: '/admin/batch', icon: Settings },
+  { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 
 export function AdminNav({ userEmail }: AdminNavProps) {
