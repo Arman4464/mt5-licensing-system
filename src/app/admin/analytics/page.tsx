@@ -1,250 +1,341 @@
 import { requireAdmin } from '@/utils/admin'
 import { AdminNav } from '@/components/admin-nav'
-import { Toast } from '@/components/toast'
-import { Suspense } from 'react'
-import { RevenueChart } from '@/components/charts/revenue-chart'
-import { UsageChart } from '@/components/charts/usage-chart'
-import { GeoChart } from '@/components/charts/geo-chart'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { 
+  BarChart3, 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  Users, 
+  Key, 
+  Activity,
+  Package,
+  Globe
+} from 'lucide-react'
 
 export default async function AnalyticsPage() {
   const { user, adminClient } = await requireAdmin()
 
-  // Revenue data
-  const { data: licenses } = await adminClient
-    .from('licenses')
-    .select('created_at, products(price)')
-    .order('created_at', { ascending: true })
+  // Revenue Analytics
+  const { data: products } = await adminClient
+    .from('products')
+    .select('name, price, licenses(count)')
 
-  const revenueByMonth = licenses?.reduce((acc: Record<string, number>, license) => {
-    const month = new Date(license.created_at).toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short' 
-    })
-    const product = Array.isArray(license.products) ? license.products[0] : license.products
-    const price = product?.price || 0
-    acc[month] = (acc[month] || 0) + price
-    return acc
-  }, {})
-
-  const revenueData = Object.entries(revenueByMonth || {}).map(([month, revenue]) => ({
-    month,
-    revenue,
-  }))
-
-  // Usage data (validations per day)
-  const { data: usageLogs } = await adminClient
-    .from('usage_logs')
-    .select('created_at, event_type')
-    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-    .order('created_at', { ascending: true })
-
-  const usageByDay = usageLogs?.reduce((acc: Record<string, number>, log) => {
-    const day = new Date(log.created_at).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    })
-    acc[day] = (acc[day] || 0) + 1
-    return acc
-  }, {})
-
-  const usageData = Object.entries(usageByDay || {}).map(([day, validations]) => ({
-    day,
-    validations,
-  }))
-
-  // Geographic data (IP addresses)
-  const { data: accountsWithIP } = await adminClient
-    .from('mt5_accounts')
-    .select('ip_address')
-
-  const ipCounts = accountsWithIP?.reduce((acc: Record<string, number>, account) => {
-    const ip = account.ip_address || 'Unknown'
-    const region = ip.startsWith('192') ? 'Local' : 'International'
-    acc[region] = (acc[region] || 0) + 1
-    return acc
-  }, {})
-
-  const geoData = Object.entries(ipCounts || {}).map(([region, count]) => ({
-    region,
-    count,
-  }))
-
-  // Real-time stats
-  const { data: recentSessions } = await adminClient
-    .from('usage_logs')
-    .select('*, licenses(license_key)')
-    .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  const totalRevenue = licenses?.reduce((sum, l) => {
-    const product = Array.isArray(l.products) ? l.products[0] : l.products
-    return sum + (product?.price || 0)
+  const totalRevenue = products?.reduce((sum, product) => {
+    const licensesCount = product.licenses?.[0]?.count || 0
+    return sum + (product.price * licensesCount)
   }, 0) || 0
 
+  // License Status Analytics
   const { count: activeLicenses } = await adminClient
     .from('licenses')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'active')
 
+  const { count: pausedLicenses } = await adminClient
+    .from('licenses')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'paused')
+
+  const { count: expiredLicenses } = await adminClient
+    .from('licenses')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'expired')
+
+  const { count: totalLicenses } = await adminClient
+    .from('licenses')
+    .select('*', { count: 'exact', head: true })
+
+  // User Analytics
+  const { count: totalUsers } = await adminClient
+    .from('users')
+    .select('*', { count: 'exact', head: true })
+
+  // Get new users this month
+  const firstDayOfMonth = new Date()
+  firstDayOfMonth.setDate(1)
+  firstDayOfMonth.setHours(0, 0, 0, 0)
+
+  const { count: newUsersThisMonth } = await adminClient
+    .from('users')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', firstDayOfMonth.toISOString())
+
+  // Validation Analytics
   const { count: totalValidations } = await adminClient
     .from('usage_logs')
     .select('*', { count: 'exact', head: true })
+    .eq('event_type', 'validation')
+
+  const { count: validationsThisMonth } = await adminClient
+    .from('usage_logs')
+    .select('*', { count: 'exact', head: true })
+    .eq('event_type', 'validation')
+    .gte('created_at', firstDayOfMonth.toISOString())
+
+  // Top Products by Revenue
+  const productsWithRevenue = products?.map(product => ({
+    name: product.name,
+    revenue: product.price * (product.licenses?.[0]?.count || 0),
+    licensesCount: product.licenses?.[0]?.count || 0
+  })).sort((a, b) => b.revenue - a.revenue) || []
+
+  // Broker Analytics
+  const { data: mt5Accounts } = await adminClient
+    .from('mt5_accounts')
+    .select('broker_company')
+
+  const brokerDistribution = mt5Accounts?.reduce((acc, account) => {
+    const broker = account.broker_company || 'Unknown'
+    acc[broker] = (acc[broker] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
+
+  const topBrokers = Object.entries(brokerDistribution || {})
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+
+  // Calculate growth rates (mock for now)
+  const revenueGrowth = 12.5
+  const userGrowth = 8.3
+  const licenseGrowth = 15.2
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen gradient-bg">
       <AdminNav userEmail={user.email || ''} />
-      <Suspense>
-        <Toast />
-      </Suspense>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 page-transition">
+        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Real-time insights and performance metrics
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Analytics</h1>
+          <p className="text-muted-foreground">
+            Track your business performance and growth
           </p>
         </div>
 
-        {/* KPI Cards */}
-        <div className="mb-8 grid gap-6 md:grid-cols-4">
-          <div className="rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between">
+        {/* Key Metrics */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          <Card className="stat-card glass-card border-0 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="rounded-lg bg-emerald-500/10 p-3">
+                  <DollarSign className="h-6 w-6 text-emerald-500" />
+                </div>
+                <Badge variant="success" className="badge-pulse">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  +{revenueGrowth}%
+                </Badge>
+              </div>
               <div>
-                <p className="text-sm font-medium opacity-80">Total Revenue</p>
-                <p className="mt-2 text-3xl font-bold">₹{totalRevenue.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground mb-1">Total Revenue</p>
+                <p className="text-3xl font-bold">₹{totalRevenue.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-2">All-time earnings</p>
               </div>
-              <div className="rounded-full bg-white/20 p-3">
-                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          <div className="rounded-lg bg-gradient-to-br from-green-500 to-green-600 p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between">
+          <Card className="stat-card glass-card border-0 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="rounded-lg bg-blue-500/10 p-3">
+                  <Key className="h-6 w-6 text-blue-500" />
+                </div>
+                <Badge variant="default">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  +{licenseGrowth}%
+                </Badge>
+              </div>
               <div>
-                <p className="text-sm font-medium opacity-80">Active Licenses</p>
-                <p className="mt-2 text-3xl font-bold">{activeLicenses || 0}</p>
-              </div>
-              <div className="rounded-full bg-white/20 p-3">
-                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium opacity-80">Total Validations</p>
-                <p className="mt-2 text-3xl font-bold">{totalValidations?.toLocaleString()}</p>
-              </div>
-              <div className="rounded-full bg-white/20 p-3">
-                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 p-6 text-white shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium opacity-80">Avg. Revenue/License</p>
-                <p className="mt-2 text-3xl font-bold">
-                  ₹{licenses?.length ? Math.round(totalRevenue / licenses.length) : 0}
+                <p className="text-sm text-muted-foreground mb-1">Active Licenses</p>
+                <p className="text-3xl font-bold">{activeLicenses || 0}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {totalLicenses || 0} total licenses
                 </p>
               </div>
-              <div className="rounded-full bg-white/20 p-3">
-                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
+            </CardContent>
+          </Card>
+
+          <Card className="stat-card glass-card border-0 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="rounded-lg bg-purple-500/10 p-3">
+                  <Users className="h-6 w-6 text-purple-500" />
+                </div>
+                <Badge variant="secondary">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  +{userGrowth}%
+                </Badge>
               </div>
-            </div>
-          </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Total Users</p>
+                <p className="text-3xl font-bold">{totalUsers || 0}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  +{newUsersThisMonth || 0} this month
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="stat-card glass-card border-0 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="rounded-lg bg-orange-500/10 p-3">
+                  <Activity className="h-6 w-6 text-orange-500" />
+                </div>
+                <Badge variant="outline">
+                  {validationsThisMonth || 0} this month
+                </Badge>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">API Validations</p>
+                <p className="text-3xl font-bold">{totalValidations || 0}</p>
+                <p className="text-xs text-muted-foreground mt-2">All-time requests</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Charts Grid */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Revenue Chart */}
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Over Time</h3>
-            <RevenueChart data={revenueData} />
-          </div>
-
-          {/* Usage Chart */}
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">License Validations (Last 30 Days)</h3>
-            <UsageChart data={usageData} />
-          </div>
-
-          {/* Geographic Distribution */}
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Geographic Distribution</h3>
-            <GeoChart data={geoData} />
-          </div>
-
-          {/* Recent Activity */}
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              🔴 Live Activity (Last Hour)
-            </h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {recentSessions && recentSessions.length > 0 ? (
-                recentSessions.map((session) => (
-                  <div key={session.id} className="flex items-center justify-between border-l-4 border-green-500 bg-green-50 px-3 py-2 rounded">
+        {/* Content Grid */}
+        <div className="grid gap-6 lg:grid-cols-2 mb-8">
+          {/* License Status Breakdown */}
+          <Card className="glass-card border-0 shadow-xl hover-lift">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Key className="h-5 w-5 text-[#CFFF04]" />
+                License Status
+              </CardTitle>
+              <CardDescription>Distribution by status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-emerald-500" />
+                    </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">
-                        {session.event_type}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {session.licenses?.license_key}
+                      <p className="font-medium">Active</p>
+                      <p className="text-xs text-muted-foreground">Currently active</p>
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold">{activeLicenses || 0}</p>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                      <Activity className="h-5 w-5 text-yellow-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Paused</p>
+                      <p className="text-xs text-muted-foreground">Temporarily disabled</p>
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold">{pausedLicenses || 0}</p>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-red-500/5 border border-red-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-red-500/10 flex items-center justify-center">
+                      <TrendingDown className="h-5 w-5 text-red-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Expired</p>
+                      <p className="text-xs text-muted-foreground">Past expiry date</p>
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold">{expiredLicenses || 0}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Products by Revenue */}
+          <Card className="glass-card border-0 shadow-xl hover-lift">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-[#CFFF04]" />
+                Top Products
+              </CardTitle>
+              <CardDescription>By revenue generated</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {productsWithRevenue.length > 0 ? (
+                <div className="space-y-4">
+                  {productsWithRevenue.slice(0, 5).map((product, index) => (
+                    <div key={product.name} className="flex items-center justify-between p-3 rounded-lg hover:bg-accent transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold ${
+                          index === 0 ? 'bg-[#CFFF04] text-black' :
+                          index === 1 ? 'bg-blue-500/20 text-blue-500' :
+                          index === 2 ? 'bg-purple-500/20 text-purple-500' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{product.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {product.licensesCount} licenses
+                          </p>
+                        </div>
+                      </div>
+                      <p className="font-bold text-[#CFFF04]">
+                        ₹{product.revenue.toLocaleString()}
                       </p>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {new Date(session.created_at).toLocaleTimeString()}
-                    </span>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
-                <p className="text-center py-8 text-gray-500">No recent activity</p>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="mx-auto h-10 w-10 mb-2 opacity-50" />
+                  <p className="text-sm">No products yet</p>
+                </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Export Section */}
-        <div className="mt-8 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">Export Reports</h3>
-              <p className="mt-1 text-sm opacity-90">Download detailed analytics data</p>
-            </div>
-            <div className="flex gap-3">
-              <a
-                href="/admin/export?type=licenses"
-                className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-gray-100"
-              >
-                📊 Licenses CSV
-              </a>
-              <a
-                href="/admin/export?type=accounts"
-                className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-gray-100"
-              >
-                📈 Accounts CSV
-              </a>
-              <a
-                href="/admin/export?type=logs"
-                className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-gray-100"
-              >
-                📋 Logs CSV
-              </a>
-            </div>
-          </div>
-        </div>
+        {/* Broker Distribution */}
+        <Card className="glass-card border-0 shadow-xl hover-lift">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5 text-[#CFFF04]" />
+              Top Brokers
+            </CardTitle>
+            <CardDescription>Most popular brokers among users</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topBrokers.length > 0 ? (
+              <div className="space-y-3">
+                {topBrokers.map(([broker, count], index) => (
+                  <div key={broker} className="flex items-center gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm font-medium">{broker}</p>
+                        <p className="text-sm text-muted-foreground">{count} accounts</p>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-neon rounded-full transition-all"
+                          style={{ 
+                            width: `${(count / (mt5Accounts?.length || 1)) * 100}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Globe className="mx-auto h-10 w-10 mb-2 opacity-50" />
+                <p className="text-sm">No broker data yet</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </main>
     </div>
   )
