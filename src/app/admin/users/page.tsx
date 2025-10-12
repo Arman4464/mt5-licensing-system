@@ -8,8 +8,7 @@ import {
   Users as UsersIcon, 
   Search, 
   Mail, 
-  Key, 
-  Activity,
+  Key,
   Shield,
   ShieldOff,
   Trash2,
@@ -18,6 +17,7 @@ import {
 import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import type { License } from '@/types'
 
 async function blockUser(formData: FormData) {
   'use server'
@@ -169,8 +169,8 @@ export default async function UsersPage({
                 {users.map((user) => {
                   const licensesArray = Array.isArray(user.licenses) ? user.licenses : []
                   const totalLicenses = licensesArray.length
-                  const activeLicenses = licensesArray.filter((l: any) => l.status === 'active').length
-                  const hasBlockedLicense = licensesArray.some((l: any) => l.status === 'suspended')
+                  const activeLicenses = licensesArray.filter((l: License) => l.status === 'active').length
+                  const hasBlockedLicense = licensesArray.some((l: License) => l.status === 'suspended')
 
                   return (
                     <div

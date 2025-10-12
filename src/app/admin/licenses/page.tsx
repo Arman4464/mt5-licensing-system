@@ -1,6 +1,5 @@
 import { requireAdmin } from '@/utils/admin'
 import { AdminNav } from '@/components/admin-nav'
-import { Suspense } from 'react'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -11,14 +10,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -26,7 +17,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { toast } from 'sonner'
 import { 
   Key, 
   MoreVertical, 
@@ -246,11 +236,7 @@ async function extendLicense(formData: FormData) {
   redirect('/admin/licenses?success=' + encodeURIComponent(`License extended by ${days} days`))
 }
 
-export default async function LicensesPage({
-  searchParams,
-}: {
-  searchParams: { success?: string; error?: string }
-}) {
+export default async function LicensesPage() {
   const { user, adminClient } = await requireAdmin()
 
   const { data: licenses } = await adminClient

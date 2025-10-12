@@ -14,6 +14,7 @@ import {
   Server,
   Globe
 } from 'lucide-react'
+import type { License, Product, MT5Account } from '@/types'
 
 export default async function UserDetailPage({
   params,
@@ -104,7 +105,7 @@ export default async function UserDetailPage({
           <CardContent>
             {user.licenses && user.licenses.length > 0 ? (
               <div className="space-y-4">
-                {user.licenses.map((license: any) => {
+                {user.licenses.map((license: License) => {
                   const product = Array.isArray(license.products) ? license.products[0] : license.products
                   const mt5AccountsCount = license.mt5_accounts?.length || 0
 
@@ -170,10 +171,10 @@ export default async function UserDetailPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {user.licenses && user.licenses.some((l: any) => l.mt5_accounts?.length > 0) ? (
+            {user.licenses && user.licenses.some((l: License) => l.mt5_accounts?.length > 0) ? (
               <div className="space-y-3">
-                {user.licenses.map((license: any) => 
-                  license.mt5_accounts?.map((account: any) => (
+                {user.licenses.map((license: License) => 
+                  license.mt5_accounts?.map((account: MT5Account) => (
                     <div key={account.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                       <div>
                         <p className="font-medium text-sm">Account #{account.account_number}</p>

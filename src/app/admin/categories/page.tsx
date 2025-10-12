@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { Folder, Plus, Trash2, Edit } from 'lucide-react'
+import { Folder, Plus, Trash2 } from 'lucide-react'
 
 async function createCategory(formData: FormData) {
   'use server'

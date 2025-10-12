@@ -1,6 +1,5 @@
 import { requireAdmin } from '@/utils/admin'
 import { AdminNav } from '@/components/admin-nav'
-import { StatsCard } from '@/components/stats-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { DollarSign, Key, Users, Activity, TrendingUp, Zap, ArrowUpRight } from 'lucide-react'

@@ -3,7 +3,6 @@ import { AdminNav } from '@/components/admin-nav'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { 
-  BarChart3, 
   TrendingUp, 
   TrendingDown, 
   DollarSign, 
