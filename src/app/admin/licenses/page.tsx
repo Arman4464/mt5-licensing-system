@@ -459,22 +459,18 @@ export default async function LicensesPage({
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem asChild>
-                                    <form action={deleteLicense}>
-                                      <input type="hidden" name="id" value={license.id} />
-                                      <button
-                                        type="submit"
-                                        onClick={() => {
-                                          if (!confirm('Are you sure? This will permanently delete this license.')) {
-                                            event?.preventDefault()
-                                          }
-                                        }}
-                                        className="flex w-full items-center gap-2 text-red-600"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                        Delete
-                                      </button>
-                                    </form>
-                                  </DropdownMenuItem>
+  <form action={deleteLicense}>
+    <input type="hidden" name="id" value={license.id} />
+    <button
+      type="submit"
+      className="flex w-full items-center gap-2 text-red-600"
+    >
+      <Trash2 className="h-4 w-4" />
+      Delete
+    </button>
+  </form>
+</DropdownMenuItem>
+
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </td>
