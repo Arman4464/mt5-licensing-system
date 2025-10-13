@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Shield, ShieldAlert, Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
 import Link from 'next/link'
 
+
 // Types
 type Mt5Account = {
   license_id: string
@@ -19,11 +20,13 @@ type Mt5Account = {
   licenses: { license_key: string } | null
 }
 
+
 type SuspiciousActivity = {
   licenseId: string
   license_key: string
   ipCount: number
 }
+
 
 async function addIPWhitelist(formData: FormData) {
   'use server'
@@ -34,9 +37,11 @@ async function addIPWhitelist(formData: FormData) {
   const ipAddress = formData.get('ip_address') as string
   const description = formData.get('description') as string
 
+
   if (!licenseId || !ipAddress) {
     return redirect('/admin/security?error=' + encodeURIComponent('License and IP address are required'))
   }
+
 
   const { error } = await adminClient
     .from('ip_whitelist')
@@ -47,13 +52,16 @@ async function addIPWhitelist(formData: FormData) {
       created_by: user.email,
     })
 
+
   if (error) {
     return redirect('/admin/security?error=' + encodeURIComponent(error.message))
   }
 
+
   revalidatePath('/admin/security')
   redirect('/admin/security?success=' + encodeURIComponent('IP whitelisted successfully'))
 }
+
 
 async function removeIPWhitelist(formData: FormData) {
   'use server'
@@ -61,11 +69,14 @@ async function removeIPWhitelist(formData: FormData) {
   const { adminClient } = await requireAdmin()
   const id = formData.get('id') as string
 
+
   await adminClient.from('ip_whitelist').delete().eq('id', id)
+
 
   revalidatePath('/admin/security')
   redirect('/admin/security?success=' + encodeURIComponent('IP removed from whitelist'))
 }
+
 
 async function toggleIPStatus(formData: FormData) {
   'use server'
@@ -74,19 +85,24 @@ async function toggleIPStatus(formData: FormData) {
   const id = formData.get('id') as string
   const isActive = formData.get('is_active') === 'true'
 
+
   await adminClient.from('ip_whitelist').update({ is_active: !isActive }).eq('id', id)
+
 
   revalidatePath('/admin/security')
   redirect('/admin/security?success=' + encodeURIComponent('IP status updated'))
 }
 
+
 export default async function SecurityPage() {
   const { user, adminClient } = await requireAdmin()
+
 
   const { data: whitelist } = await adminClient
     .from('ip_whitelist')
     .select('*, licenses(license_key, status)')
     .order('created_at', { ascending: false })
+
 
   const { data: licenses } = await adminClient
     .from('licenses')
@@ -94,9 +110,11 @@ export default async function SecurityPage() {
     .eq('status', 'active')
     .order('license_key', { ascending: true })
 
+
   const { data: mt5Accounts } = await adminClient
     .from('mt5_accounts')
     .select('license_id, ip_address, licenses(license_key)')
+
 
   // Group IPs by license
   const ipsByLicense = new Map<string, { license_key: string; ips: Set<string> }>()
@@ -104,6 +122,7 @@ export default async function SecurityPage() {
   if (mt5Accounts) {
     for (const account of mt5Accounts as unknown as Mt5Account[]) {
       if (!account.license_id || !account.licenses?.license_key) continue
+
 
       if (!ipsByLicense.has(account.license_id)) {
         ipsByLicense.set(account.license_id, {
@@ -114,6 +133,7 @@ export default async function SecurityPage() {
       ipsByLicense.get(account.license_id)!.ips.add(account.ip_address)
     }
   }
+
 
   // Find licenses with > 3 IPs
   const suspicious: SuspiciousActivity[] = []
@@ -127,11 +147,13 @@ export default async function SecurityPage() {
     }
   })
 
+
   return (
     <AdminLayout user={user}>
       <Suspense>
         <Toast />
       </Suspense>
+
 
       <div className="page-transition">
         {/* Header */}
@@ -141,6 +163,7 @@ export default async function SecurityPage() {
             Manage IP whitelisting and monitor suspicious activity.
           </p>
         </div>
+
 
         {/* Suspicious Activity Alert */}
         {suspicious.length > 0 && (
@@ -173,6 +196,7 @@ export default async function SecurityPage() {
           </Card>
         )}
 
+
         {/* Add IP Whitelist Form */}
         <Card className="mb-8 glass-card border-0 shadow-xl">
           <CardHeader>
@@ -201,6 +225,7 @@ export default async function SecurityPage() {
                   </select>
                 </div>
 
+
                 <div className="space-y-2">
                   <Label htmlFor="ip_address">IP Address *</Label>
                   <Input
@@ -211,6 +236,7 @@ export default async function SecurityPage() {
                     className="bg-background/50 border-border/50 focus:border-neon"
                   />
                 </div>
+
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description (Optional)</Label>
@@ -223,6 +249,7 @@ export default async function SecurityPage() {
                 </div>
               </div>
 
+
               <div className="flex justify-end">
                 <Button type="submit" className="h-11 gap-2 bg-gradient-neon text-black font-bold button-shine">
                   <Plus className="h-4 w-4" />
@@ -232,6 +259,7 @@ export default async function SecurityPage() {
             </form>
           </CardContent>
         </Card>
+
 
         {/* Whitelist Table */}
         <Card className="glass-card border-0 shadow-xl">
@@ -257,13 +285,18 @@ export default async function SecurityPage() {
                   </thead>
                   <tbody className="divide-y divide-border/30">
                     {whitelist.map((item) => {
-                      const licenseKey = (item.licenses as { license_key: string })?.license_key
+                      const licenseKey = (item.licenses as { license_key: string } | null)?.license_key
+                      const licenseId = (item.licenses as { id: string } | null)?.id
                       return (
                         <tr key={item.id} className="hover:bg-background/30 transition-colors">
                           <td className="px-4 py-3 text-sm font-mono text-foreground/80">
-                            <Link href={`/admin/licenses/${(item.licenses as any)?.id}`} className="hover:text-neon">
-                              {licenseKey || 'N/A'}
-                            </Link>
+                            {licenseId ? (
+                              <Link href={`/admin/licenses/${licenseId}`} className="hover:text-neon">
+                                {licenseKey || 'N/A'}
+                              </Link>
+                            ) : (
+                              <span>{licenseKey || 'N/A'}</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-sm font-mono text-foreground/80">{item.ip_address}</td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">{item.description || '-'}</td>

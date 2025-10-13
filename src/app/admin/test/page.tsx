@@ -19,8 +19,8 @@ export default async function TestPage() {
     const { data, error } = await adminClient.rpc('is_admin')
     if (error) throw error
     results.push({ title: 'Admin Check (is_admin RPC)', success: data === true, data: { isAdmin: data } })
-  } catch (error: any) {
-    results.push({ title: 'Admin Check (is_admin RPC)', success: false, data: error.message })
+  } catch (error: unknown) {
+    results.push({ title: 'Admin Check (is_admin RPC)', success: false, data: (error as Error).message })
   }
 
   // Test 2: Can we read products?
@@ -28,8 +28,8 @@ export default async function TestPage() {
     const { data, error, count } = await adminClient.from('products').select('*', { count: 'exact', head: true })
     if (error) throw error
     results.push({ title: 'Read Products Table', success: true, data: { count } })
-  } catch (error: any) {
-    results.push({ title: 'Read Products Table', success: false, data: error.message })
+  } catch (error: unknown) {
+    results.push({ title: 'Read Products Table', success: false, data: (error as Error).message })
   }
 
   // Test 3: Can we read users?
@@ -37,8 +37,8 @@ export default async function TestPage() {
     const { data, error, count } = await adminClient.from('users').select('*', { count: 'exact', head: true })
     if (error) throw error
     results.push({ title: 'Read Users Table', success: true, data: { count } })
-  } catch (error: any) {
-    results.push({ title: 'Read Users Table', success: false, data: error.message })
+  } catch (error: unknown) {
+    results.push({ title: 'Read Users Table', success: false, data: (error as Error).message })
   }
 
   // Test 4: Can we insert to users? (and then delete)
@@ -60,8 +60,8 @@ export default async function TestPage() {
     if (deleteError) throw deleteError
 
     results.push({ title: 'Insert & Delete User', success: true, data: { insertedId: insertedUser.id, deleted: true } })
-  } catch (error: any) {
-    results.push({ title: 'Insert & Delete User', success: false, data: error.message })
+  } catch (error: unknown) {
+    results.push({ title: 'Insert & Delete User', success: false, data: (error as Error).message })
   }
 
   return (

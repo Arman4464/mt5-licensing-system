@@ -20,6 +20,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 
+
 async function batchExtendLicenses(formData: FormData) {
   'use server'
   
@@ -29,25 +30,29 @@ async function batchExtendLicenses(formData: FormData) {
   const status = formData.get('status') as string
   const reactivate = formData.get('reactivate') === 'on'
 
+
   if (isNaN(days) || !status) {
     redirect('/admin/batch?error=Days and status required')
   }
+
 
   const { data: licenses } = await adminClient
     .from('licenses')
     .select('id, expires_at, status')
     .eq('status', status)
 
+
   if (!licenses || licenses.length === 0) {
     redirect('/admin/batch?error=No licenses found with that status')
   }
+
 
   const updates = licenses.map(license => {
     const currentExpiry = license.expires_at ? new Date(license.expires_at) : new Date()
     const newExpiry = new Date(currentExpiry)
     newExpiry.setDate(newExpiry.getDate() + days)
     
-    const updateData: Record<string, any> = { expires_at: newExpiry.toISOString() }
+    const updateData: Record<string, string> = { expires_at: newExpiry.toISOString() }
     
     if (reactivate && (license.status === 'suspended' || license.status === 'expired')) {
       updateData.status = 'active'
@@ -59,16 +64,20 @@ async function batchExtendLicenses(formData: FormData) {
       .eq('id', license.id)
   })
 
+
   await Promise.all(updates)
+
 
   revalidatePath('/admin/batch')
   redirect(`/admin/batch?success=Extended ${licenses.length} licenses by ${days} days${reactivate ? ' and reactivated' : ''}`)
 }
 
+
 async function batchSuspendExpired() {
   'use server'
   
   const { adminClient } = await requireAdmin()
+
 
   const { data: expiredLicenses } = await adminClient
     .from('licenses')
@@ -76,27 +85,33 @@ async function batchSuspendExpired() {
     .eq('status', 'active')
     .lt('expires_at', new Date().toISOString())
 
+
   if (!expiredLicenses || expiredLicenses.length === 0) {
     redirect('/admin/batch?info=No currently active licenses have expired.')
   }
+
 
   await adminClient
     .from('licenses')
     .update({ status: 'expired' })
     .in('id', expiredLicenses.map(l => l.id))
 
+
   revalidatePath('/admin/batch')
   redirect(`/admin/batch?success=Set ${expiredLicenses.length} expired licenses to 'expired' status.`)
 }
+
 
 async function batchDeleteInactive(formData: FormData) {
   'use server'
   
   const { adminClient } = await requireAdmin()
 
+
   const daysInactive = parseInt(formData.get('days') as string) || 90
   const cutoffDate = new Date()
   cutoffDate.setDate(cutoffDate.getDate() - daysInactive)
+
 
   const { data: inactiveLicenses } = await adminClient
     .from('licenses')
@@ -104,36 +119,44 @@ async function batchDeleteInactive(formData: FormData) {
     .eq('status', 'expired')
     .lt('updated_at', cutoffDate.toISOString())
 
+
   if (!inactiveLicenses || inactiveLicenses.length === 0) {
     redirect('/admin/batch?info=No inactive licenses to delete')
   }
+
 
   await adminClient
     .from('licenses')
     .delete()
     .in('id', inactiveLicenses.map(l => l.id))
 
+
   revalidatePath('/admin/batch')
   redirect(`/admin/batch?success=Deleted ${inactiveLicenses.length} inactive licenses`)
 }
 
+
 export default async function BatchOperationsPage() {
   const { user, adminClient } = await requireAdmin()
+
 
   const { count: activeCount } = await adminClient
     .from('licenses')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'active')
 
+
   const { count: expiredCount } = await adminClient
     .from('licenses')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'expired')
 
+
   const { count: suspendedCount } = await adminClient
     .from('licenses')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'suspended')
+
 
   return (
     <AdminLayout user={user}>
@@ -147,6 +170,7 @@ export default async function BatchOperationsPage() {
             Perform bulk actions on multiple licenses at once. Use with caution.
           </p>
         </div>
+
 
         {/* Stats Cards */}
         <div className="mb-8 grid gap-6 md:grid-cols-3">
@@ -184,6 +208,7 @@ export default async function BatchOperationsPage() {
             </CardContent>
           </Card>
         </div>
+
 
         <div className="space-y-8">
           {/* Batch Extend */}
@@ -236,11 +261,12 @@ export default async function BatchOperationsPage() {
             </CardContent>
           </Card>
 
+
           {/* Batch Suspend Expired */}
           <Card className="glass-card border-0 shadow-xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Pause className="text-neon" /> Auto-Set Expired Status</CardTitle>
-              <CardDescription>Find all 'active' licenses with an expiry date in the past and set their status to 'expired'.</CardDescription>
+              <CardDescription>Find all &apos;active&apos; licenses with an expiry date in the past and set their status to &apos;expired&apos;.</CardDescription>
             </CardHeader>
             <CardContent>
               <form action={batchSuspendExpired}>
@@ -251,11 +277,12 @@ export default async function BatchOperationsPage() {
             </CardContent>
           </Card>
 
+
           {/* Batch Delete Inactive */}
           <Card className="glass-card border-red-500/30 shadow-xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-red-400"><AlertTriangle /> Delete Inactive Licenses</CardTitle>
-              <CardDescription className="text-red-400/80">Permanently delete 'expired' licenses that have not been updated for a specified period.</CardDescription>
+              <CardDescription className="text-red-400/80">Permanently delete &apos;expired&apos; licenses that have not been updated for a specified period.</CardDescription>
             </CardHeader>
             <CardContent>
               <form action={batchDeleteInactive} className="flex items-end gap-4">
