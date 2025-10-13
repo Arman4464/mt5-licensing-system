@@ -8,11 +8,16 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Mark8Pips - Professional MT5 Trading Solutions',
-  description: 'Automated Expert Advisors and Live Trading Signals',
-  icons: {
-    icon: '/favicon.ico',
+  description: 'Premium Expert Advisors for MT4 & MT5. Automated trading strategies backed by years of backtesting and real-world performance.',
+  keywords: ['MT5 EA', 'Expert Advisor', 'Forex Trading', 'Automated Trading', 'MT4 Robot'],
+  authors: [{ name: 'Mark8Pips' }],
+  openGraph: {
+    title: 'Mark8Pips - Professional MT5 Trading Solutions',
+    description: 'Premium Expert Advisors for automated forex trading',
+    type: 'website',
   },
 }
+
 
 export default function RootLayout({
   children,
