@@ -9,7 +9,6 @@ import {
   Shield, 
   TrendingUp, 
   Award,
-  CheckCircle,
   Star
 } from 'lucide-react'
 

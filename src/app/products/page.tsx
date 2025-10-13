@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { createClient } from '@/utils/supabase/server'
-import { ArrowRight, Star, Filter, Search } from 'lucide-react'
+import { ArrowRight, Star, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
 export default async function ProductsPage({

@@ -6,7 +6,7 @@ import { CheckCircle, XCircle } from 'lucide-react'
 interface TestResult {
   title: string
   success: boolean
-  data: any
+  data: unknown
 }
 
 export default async function TestPage() {
