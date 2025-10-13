@@ -30,15 +30,15 @@ export default async function HomePage() {
     .order('name', { ascending: true })
 
   return (
-    <div className="min-h-screen gradient-bg">
+    <div className="min-h-screen gradient-bg font-sans">
       {/* Navigation */}
       <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
               <div className="text-2xl">📊</div>
-              <span className="text-xl font-bold">
-                Mark<span className="text-[#CFFF04]">8</span>Pips
+              <span className="text-xl font-bold font-sans">
+                Mark<span className="text-neon">8</span>Pips
               </span>
             </Link>
 
@@ -58,7 +58,7 @@ export default async function HomePage() {
               <Button variant="ghost" asChild>
                 <Link href="/auth/signin">Sign In</Link>
               </Button>
-              <Button asChild className="bg-gradient-neon hover:opacity-90 text-black button-shine">
+              <Button asChild className="bg-gradient-to-r from-neon to-green-400 hover:opacity-90 text-black button-shine">
                 <Link href="/products">
                   Browse EAs
                   <ArrowRight className="ml-2 h-4 w-4" />
@@ -72,13 +72,13 @@ export default async function HomePage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#CFFF04] rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-neon rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse delay-1000"></div>
         </div>
 
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
           <div className="text-center page-transition">
-            <Badge className="mb-4 bg-[#CFFF04]/10 text-[#CFFF04] border-[#CFFF04]/20">
+            <Badge className="mb-4 bg-neon/10 text-neon border-neon/20">
               🚀 Professional Trading Solutions
             </Badge>
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
@@ -89,7 +89,7 @@ export default async function HomePage() {
               Premium Expert Advisors for MT4 & MT5. Automated trading strategies backed by years of backtesting and real-world performance.
             </p>
             <div className="flex items-center justify-center gap-4">
-              <Button size="lg" asChild className="bg-gradient-neon hover:opacity-90 text-black button-shine">
+              <Button size="lg" asChild className="bg-gradient-to-r from-neon to-green-400 hover:opacity-90 text-black button-shine">
                 <Link href="/products">
                   Explore Products
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -103,19 +103,19 @@ export default async function HomePage() {
             {/* Stats */}
             <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
               <div className="text-center">
-                <p className="text-3xl font-bold text-[#CFFF04]">500+</p>
+                <p className="text-3xl font-bold text-neon">500+</p>
                 <p className="text-sm text-muted-foreground mt-1">Active Traders</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-[#CFFF04]">₹2M+</p>
+                <p className="text-3xl font-bold text-neon">₹2M+</p>
                 <p className="text-sm text-muted-foreground mt-1">Total Profits</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-[#CFFF04]">4.9★</p>
+                <p className="text-3xl font-bold text-neon">4.9★</p>
                 <p className="text-sm text-muted-foreground mt-1">User Rating</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-[#CFFF04]">24/7</p>
+                <p className="text-3xl font-bold text-neon">24/7</p>
                 <p className="text-sm text-muted-foreground mt-1">Support</p>
               </div>
             </div>
@@ -160,8 +160,8 @@ export default async function HomePage() {
 
             <Card className="glass-card border-0 shadow-xl hover-lift">
               <CardHeader>
-                <div className="mb-4 h-12 w-12 rounded-lg bg-[#CFFF04]/10 flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-[#CFFF04]" />
+                <div className="mb-4 h-12 w-12 rounded-lg bg-neon/10 flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-neon" />
                 </div>
                 <CardTitle>Proven Results</CardTitle>
                 <CardDescription>
@@ -178,7 +178,7 @@ export default async function HomePage() {
         <section className="py-24 border-t border-border/50">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
-              <Badge className="mb-4 bg-[#CFFF04]/10 text-[#CFFF04] border-[#CFFF04]/20">
+              <Badge className="mb-4 bg-neon/10 text-neon border-neon/20">
                 <Star className="h-3 w-3 mr-1" />
                 Featured Products
               </Badge>
@@ -207,7 +207,7 @@ export default async function HomePage() {
                               {product.platform}
                             </Badge>
                           </div>
-                          <Star className="h-4 w-4 text-[#CFFF04] fill-[#CFFF04]" />
+                          <Star className="h-4 w-4 text-neon fill-neon" />
                         </div>
                         <CardTitle className="text-xl">{product.name}</CardTitle>
                         {category && (
@@ -219,10 +219,10 @@ export default async function HomePage() {
                           {product.description}
                         </p>
                         <div className="flex items-center justify-between">
-                          <p className="text-2xl font-bold text-[#CFFF04]">
+                          <p className="text-2xl font-bold text-neon">
                             ₹{product.price}
                           </p>
-                          <Button size="sm" className="gap-2 bg-gradient-neon hover:opacity-90 text-black">
+                          <Button size="sm" className="gap-2 bg-gradient-to-r from-neon to-green-400 hover:opacity-90 text-black">
                             View Details
                             <ArrowRight className="h-3 w-3" />
                           </Button>
@@ -278,14 +278,14 @@ export default async function HomePage() {
       <section className="py-24 border-t border-border/50">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
           <div className="glass-card rounded-2xl p-12 border-0 shadow-2xl">
-            <Award className="h-16 w-16 text-[#CFFF04] mx-auto mb-6" />
+            <Award className="h-16 w-16 text-neon mx-auto mb-6" />
             <h2 className="text-3xl font-bold mb-4">Ready to Start Trading?</h2>
             <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
               Join hundreds of traders who trust Mark8Pips for their automated trading needs. 
               Professional support and lifetime updates included.
             </p>
             <div className="flex items-center justify-center gap-4">
-              <Button size="lg" asChild className="bg-gradient-neon hover:opacity-90 text-black button-shine">
+              <Button size="lg" asChild className="bg-gradient-to-r from-neon to-green-400 hover:opacity-90 text-black button-shine">
                 <Link href="/products">
                   Get Started
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -306,8 +306,8 @@ export default async function HomePage() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="text-2xl">📊</div>
-                <span className="text-lg font-bold">
-                  Mark<span className="text-[#CFFF04]">8</span>Pips
+                <span className="text-lg font-bold font-sans">
+                  Mark<span className="text-neon">8</span>Pips
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">

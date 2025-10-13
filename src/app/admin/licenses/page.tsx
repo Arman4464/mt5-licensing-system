@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/utils/admin'
-import { AdminNav } from '@/components/admin-nav'
+import { AdminLayout } from '@/components/admin-layout'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -28,6 +28,8 @@ import {
   Search,
   Filter,
 } from 'lucide-react'
+import { Toast } from '@/components/toast'
+import { Suspense } from 'react'
 
 async function generateLicense(formData: FormData) {
   'use server'
@@ -255,27 +257,28 @@ export default async function LicensesPage() {
     .order('name', { ascending: true })
 
   return (
-    <div className="min-h-screen bg-background">
-      <AdminNav userEmail={user.email || ''} />
-
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <AdminLayout user={user}>
+      <Suspense>
+        <Toast />
+      </Suspense>
+      <div className="page-transition">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Licenses</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage customer licenses and MT5 accounts
+          <h1 className="text-4xl font-bold tracking-tight mb-2 gradient-text">License Management</h1>
+          <p className="text-muted-foreground">
+            Manage customer licenses and MT5 accounts.
           </p>
         </div>
 
         {/* Generate License Card */}
-        <Card className="mb-8">
+        <Card className="mb-8 glass-card border-0 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Key className="h-5 w-5" />
+              <Key className="h-5 w-5 text-neon" />
               Generate New License
             </CardTitle>
             <CardDescription>
-              Create a new license for a customer
+              Create a new license for a customer. The license key will be emailed automatically.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -287,11 +290,11 @@ export default async function LicensesPage() {
                     id="product_id"
                     name="product_id"
                     required
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-11 block w-full rounded-md bg-background/50 border-border/50 focus:border-neon focus:ring-neon transition-colors px-3"
                   >
                     <option value="">Select product</option>
                     {products?.map((product) => (
-                      <option key={product.id} value={product.id}>
+                      <option key={product.id} value={product.id} className="bg-background">
                         {product.name}
                       </option>
                     ))}
@@ -306,6 +309,7 @@ export default async function LicensesPage() {
                     name="user_email"
                     required
                     placeholder="customer@example.com"
+                    className="h-11 bg-background/50 border-border/50 focus:border-neon"
                   />
                 </div>
 
@@ -318,12 +322,13 @@ export default async function LicensesPage() {
                     required
                     min="1"
                     defaultValue="365"
+                    className="h-11 bg-background/50 border-border/50 focus:border-neon"
                   />
                 </div>
               </div>
 
               <div className="flex justify-end">
-                <Button type="submit" className="gap-2">
+                <Button type="submit" className="h-11 gap-2 bg-gradient-neon text-black font-bold button-shine">
                   <Key className="h-4 w-4" />
                   Generate & Email License
                 </Button>
@@ -333,7 +338,7 @@ export default async function LicensesPage() {
         </Card>
 
         {/* Licenses Table */}
-        <Card>
+        <Card className="glass-card border-0 shadow-xl">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -343,10 +348,10 @@ export default async function LicensesPage() {
                 </CardDescription>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" className="h-9 w-9 bg-background/50 border-border/50 hover:border-neon hover:text-neon">
                   <Search className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" className="h-9 w-9 bg-background/50 border-border/50 hover:border-neon hover:text-neon">
                   <Filter className="h-4 w-4" />
                 </Button>
               </div>
@@ -354,60 +359,61 @@ export default async function LicensesPage() {
           </CardHeader>
           <CardContent>
             {licenses && licenses.length > 0 ? (
-              <div className="rounded-md border">
+              <div className="border border-border/50 rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="px-4 py-3 text-left text-sm font-medium">License Key</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium">Customer</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium">Product</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium">Expires</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium">Accounts</th>
-                        <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
+                      <tr className="border-b border-border/50 bg-background/20 text-xs font-medium uppercase text-muted-foreground">
+                        <th className="px-4 py-3 text-left">License Key</th>
+                        <th className="px-4 py-3 text-left">Customer</th>
+                        <th className="px-4 py-3 text-left">Product</th>
+                        <th className="px-4 py-3 text-left">Status</th>
+                        <th className="px-4 py-3 text-left">Expires</th>
+                        <th className="px-4 py-3 text-left">Accounts</th>
+                        <th className="px-4 py-3 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-border/50">
                       {licenses.map((license) => {
                         const product = Array.isArray(license.products) ? license.products[0] : license.products
                         const userInfo = Array.isArray(license.users) ? license.users[0] : license.users
                         const daysRemaining = license.expires_at 
                           ? Math.ceil((new Date(license.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
                           : null
+                        
+                        const statusVariant: { [key: string]: string } = {
+                          active: 'bg-green-500/20 text-green-400 border-green-500/30',
+                          paused: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                          expired: 'bg-red-500/20 text-red-400 border-red-500/30',
+                          cancelled: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+                          suspended: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+                          revoked: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+                        };
 
                         return (
-                          <tr key={license.id} className="border-b hover:bg-muted/50 transition-colors">
+                          <tr key={license.id} className="hover:bg-background/50 transition-colors">
                             <td className="px-4 py-3">
-                              <code className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                                {license.license_key}
+                              <code className="text-xs font-mono bg-background/50 px-2 py-1 rounded border border-border/50 text-neon">
+                                {license.license_key.substring(0, 8)}...
                               </code>
                             </td>
-                            <td className="px-4 py-3 text-sm">
+                            <td className="px-4 py-3 text-sm text-muted-foreground">
                               {userInfo?.email || 'N/A'}
                             </td>
-                            <td className="px-4 py-3 text-sm">
+                            <td className="px-4 py-3 text-sm text-foreground">
                               {product?.name || 'N/A'}
                             </td>
                             <td className="px-4 py-3">
-                              <Badge
-                                variant={
-                                  license.status === 'active'
-                                    ? 'success'
-                                    : license.status === 'paused'
-                                    ? 'warning'
-                                    : 'destructive'
-                                }
-                              >
+                              <Badge className={`border ${statusVariant[license.status]}`}>
                                 {license.status}
                               </Badge>
                             </td>
-                            <td className="px-4 py-3 text-sm">
+                            <td className="px-4 py-3 text-sm text-muted-foreground">
                               {license.expires_at ? (
                                 <div>
                                   <div>{new Date(license.expires_at).toLocaleDateString()}</div>
                                   {daysRemaining !== null && daysRemaining > 0 && (
-                                    <div className={`text-xs ${daysRemaining <= 7 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                                    <div className={`text-xs ${daysRemaining <= 7 ? 'text-red-400' : 'text-muted-foreground'}`}>
                                       {daysRemaining} days left
                                     </div>
                                   )}
@@ -416,30 +422,30 @@ export default async function LicensesPage() {
                                 'Never'
                               )}
                             </td>
-                            <td className="px-4 py-3 text-sm">
+                            <td className="px-4 py-3 text-sm text-foreground">
                               {license.mt5_accounts?.length || 0} / {product?.max_accounts || 3}
                             </td>
                             <td className="px-4 py-3 text-right">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
+                                  <Button variant="ghost" size="icon" className="hover:bg-background/50">
                                     <MoreVertical className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
+                                <DropdownMenuContent align="end" className="glass-card">
                                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
+                                  <DropdownMenuSeparator className="bg-border/50" />
                                   <DropdownMenuItem asChild>
-                                    <Link href={`/admin/licenses/${license.id}`} className="flex items-center gap-2">
+                                    <Link href={`/admin/licenses/${license.id}`} className="flex items-center gap-2 cursor-pointer">
                                       <Eye className="h-4 w-4" />
                                       View Details
                                     </Link>
                                   </DropdownMenuItem>
                                   {license.status === 'active' ? (
                                     <DropdownMenuItem asChild>
-                                      <form action={pauseLicense}>
+                                      <form action={pauseLicense} className="w-full">
                                         <input type="hidden" name="id" value={license.id} />
-                                        <button type="submit" className="flex w-full items-center gap-2">
+                                        <button type="submit" className="flex w-full items-center gap-2 cursor-pointer">
                                           <Pause className="h-4 w-4" />
                                           Pause
                                         </button>
@@ -447,9 +453,9 @@ export default async function LicensesPage() {
                                     </DropdownMenuItem>
                                   ) : license.status === 'paused' ? (
                                     <DropdownMenuItem asChild>
-                                      <form action={resumeLicense}>
+                                      <form action={resumeLicense} className="w-full">
                                         <input type="hidden" name="id" value={license.id} />
-                                        <button type="submit" className="flex w-full items-center gap-2">
+                                        <button type="submit" className="flex w-full items-center gap-2 cursor-pointer">
                                           <Play className="h-4 w-4" />
                                           Resume
                                         </button>
@@ -460,20 +466,19 @@ export default async function LicensesPage() {
                                     <Clock className="h-4 w-4 mr-2" />
                                     Extend
                                   </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
+                                  <DropdownMenuSeparator className="bg-border/50" />
                                   <DropdownMenuItem asChild>
-  <form action={deleteLicense}>
-    <input type="hidden" name="id" value={license.id} />
-    <button
-      type="submit"
-      className="flex w-full items-center gap-2 text-red-600"
-    >
-      <Trash2 className="h-4 w-4" />
-      Delete
-    </button>
-  </form>
-</DropdownMenuItem>
-
+                                    <form action={deleteLicense} className="w-full">
+                                      <input type="hidden" name="id" value={license.id} />
+                                      <button
+                                        type="submit"
+                                        className="flex w-full items-center gap-2 text-red-400 cursor-pointer"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        Delete
+                                      </button>
+                                    </form>
+                                  </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </td>
@@ -486,16 +491,16 @@ export default async function LicensesPage() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <Key className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-semibold">No licenses yet</h3>
+                <Key className="mx-auto h-12 w-12 text-neon/50 mb-3" />
+                <h3 className="mt-4 text-lg font-semibold text-foreground">No licenses yet</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Generate your first license above
+                  Generate your first license above.
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   )
 }

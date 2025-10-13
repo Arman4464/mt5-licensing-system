@@ -9,6 +9,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-inter)'],
+        mono: ['var(--font-jetbrains-mono)'],
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -43,32 +47,45 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        neon: {
-          green: '#CFFF04',
-        },
+        neon: '#CFFF04',
       },
       borderRadius: {
+        xl: 'calc(var(--radius) + 4px)',
         lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        md: 'calc(var(--radius) - 4px)',
+        sm: 'calc(var(--radius) - 8px)',
       },
       keyframes: {
-        'fade-in': {
-          from: { opacity: '0', transform: 'translateY(10px)' },
+        'fade-slide-in': {
+          from: { opacity: '0', transform: 'translateY(20px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
-        'slide-in': {
-          from: { transform: 'translateX(-100%)' },
-          to: { transform: 'translateX(0)' },
+        shine: {
+          to: { transform: 'rotateZ(60deg) translate(1em, -9em)' },
+        },
+        'gradient-shift': {
+          '0%, 100%': { 'background-position': '0% 50%' },
+          '50%': { 'background-position': '100% 50%' },
+        },
+        'neon-pulse': {
+          '50%': {
+            boxShadow: '0 0 10px rgba(207, 255, 4, 0.6), 0 0 20px rgba(207, 255, 4, 0.4), 0 0 30px rgba(207, 255, 4, 0.3), 0 0 50px rgba(207, 255, 4, 0.2)',
+          },
+        },
+        'badge-pulse': {
+          '50%': { opacity: '0.7' },
         },
       },
       animation: {
-        'fade-in': 'fade-in 0.3s ease-out',
-        'slide-in': 'slide-in 0.3s ease-out',
+        'fade-slide-in': 'fade-slide-in 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        shine: 'shine 3s infinite',
+        'gradient-shift': 'gradient-shift 15s ease infinite',
+        'neon-pulse': 'neon-pulse 2s ease-in-out infinite',
+        'badge-pulse': 'badge-pulse-anim 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },
-  plugins: [],
+  plugins: [require('tailwindcss-animate')],
 }
 
 export default config

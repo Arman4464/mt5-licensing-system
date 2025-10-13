@@ -39,7 +39,7 @@ export default async function SignInPage() {
     <div className="min-h-screen gradient-bg flex items-center justify-center p-4">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#CFFF04] rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-neon rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse delay-1000"></div>
       </div>
 
@@ -76,7 +76,7 @@ export default async function SignInPage() {
                   type="email"
                   placeholder="mark8pips@example.com"
                   required
-                  className="h-11 bg-background/50 border-border/50 focus:border-[#CFFF04] transition-colors"
+                  className="h-11 bg-background/50 border-border/50 focus:border-neon transition-colors"
                 />
               </div>
 
@@ -90,7 +90,7 @@ export default async function SignInPage() {
                   type="password"
                   placeholder="••••••••"
                   required
-                  className="h-11 bg-background/50 border-border/50 focus:border-[#CFFF04] transition-colors"
+                  className="h-11 bg-background/50 border-border/50 focus:border-neon transition-colors"
                 />
               </div>
 
@@ -106,7 +106,7 @@ export default async function SignInPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Don&apos;t have an account?{' '}
-                <Link href="/auth/signup" className="text-[#CFFF04] hover:underline font-medium">
+                <Link href="/auth/signup" className="text-neon hover:underline font-medium">
                   Sign Up
                 </Link>
               </p>
@@ -123,7 +123,7 @@ export default async function SignInPage() {
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-muted-foreground">
           <p className="flex items-center justify-center gap-1">
-            <Sparkles className="h-3 w-3 text-[#CFFF04]" />
+            <Sparkles className="h-3 w-3 text-neon" />
             Secured with enterprise-grade encryption
           </p>
         </div>

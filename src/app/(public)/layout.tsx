@@ -10,81 +10,81 @@ export default function PublicLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <nav className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-lg">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="flex h-16 items-center justify-between">
-              <Link href="/" className="flex items-center gap-2">
-                <span className="text-2xl">🛡️</span>
-                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Mark8Pips
-                </span>
+    <div className="min-h-screen flex flex-col gradient-bg">
+      <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="text-3xl">�</div>
+              <span className="text-xl font-bold">
+                Mark<span className="gradient-text">8</span>Pips
+              </span>
+            </Link>
+            
+            <div className="flex items-center gap-6">
+              <Link href="/#products" className="text-sm font-medium text-muted-foreground hover:text-neon transition-colors">
+                Products
               </Link>
-              
-              <div className="flex items-center gap-6">
-                <Link href="/#products" className="text-sm font-medium text-gray-700 hover:text-blue-600">
-                  Products
-                </Link>
-                <Link href="/#features" className="text-sm font-medium text-gray-700 hover:text-blue-600">
-                  Features
-                </Link>
-                <Link href="/docs" className="text-sm font-medium text-gray-700 hover:text-blue-600">
-                  Docs
-                </Link>
-                <Link 
-                  href="/login" 
-                  className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
-                >
-                  Sign In
-                </Link>
-              </div>
+              <Link href="/#features" className="text-sm font-medium text-muted-foreground hover:text-neon transition-colors">
+                Features
+              </Link>
+              <Link href="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-neon transition-colors">
+                My Licenses
+              </Link>
+              <Link 
+                href="/login" 
+                className="rounded-full bg-gradient-neon px-4 py-2 text-sm font-bold text-black button-shine"
+              >
+                Admin
+              </Link>
             </div>
           </div>
-        </nav>
-        
+        </div>
+      </nav>
+      
+      <main className="flex-grow">
         {children}
-        
-        <footer className="border-t border-gray-200 bg-gray-50">
-          <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-            <div className="grid gap-8 md:grid-cols-4">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Mark8Pips</h3>
-                <p className="mt-2 text-sm text-gray-600">
-                  Professional MT5 Expert Advisors & Indicators
-                </p>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900">Products</h4>
-                <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li><Link href="/#products">All EAs</Link></li>
-                  <li><Link href="/#features">Features</Link></li>
-                  <li><Link href="/pricing">Pricing</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900">Support</h4>
-                <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li><Link href="/docs">Documentation</Link></li>
-                  <li><Link href="/support">Contact</Link></li>
-                  <li><Link href="/faq">FAQ</Link></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900">Legal</h4>
-                <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li><Link href="/terms">Terms</Link></li>
-                  <li><Link href="/privacy">Privacy</Link></li>
-                  <li><Link href="/refund">Refund Policy</Link></li>
-                </ul>
-              </div>
+      </main>
+      
+      <footer className="border-t border-border/50 bg-background/50">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <div className="grid gap-8 md:grid-cols-4">
+            <div>
+              <h3 className="text-lg font-bold gradient-text">Mark8Pips</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Professional MT5 Trading Solutions
+              </p>
             </div>
-            <div className="mt-8 border-t border-gray-200 pt-8 text-center text-sm text-gray-500">
-              © 2025 Mark8Pips. All rights reserved.
+            <div>
+              <h4 className="text-sm font-semibold text-foreground">Products</h4>
+              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/#products" className="hover:text-neon transition-colors">All EAs</Link></li>
+                <li><Link href="/#features" className="hover:text-neon transition-colors">Features</Link></li>
+                <li><Link href="/#pricing" className="hover:text-neon transition-colors">Pricing</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-foreground">Support</h4>
+              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/docs" className="hover:text-neon transition-colors">Documentation</Link></li>
+                <li><Link href="/support" className="hover:text-neon transition-colors">Contact</Link></li>
+                <li><Link href="/faq" className="hover:text-neon transition-colors">FAQ</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-foreground">Legal</h4>
+              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/terms" className="hover:text-neon transition-colors">Terms</Link></li>
+                <li><Link href="/privacy" className="hover:text-neon transition-colors">Privacy</Link></li>
+                <li><Link href="/refund" className="hover:text-neon transition-colors">Refund Policy</Link></li>
+              </ul>
             </div>
           </div>
-        </footer>
-      </body>
-    </html>
+          <div className="mt-8 border-t border-border/50 pt-8 text-center text-sm text-muted-foreground">
+            © 2025 Mark8Pips. All rights reserved.
+          </div>
+        </div>
+      </footer>
+    </div>
   )
 }

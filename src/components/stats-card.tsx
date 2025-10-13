@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -7,11 +8,8 @@ interface StatsCardProps {
   value: string | number
   description?: string
   icon: LucideIcon
-  trend?: {
-    value: number
-    isPositive: boolean
-  }
-  className?: string
+  change?: string
+  iconColor?: string
 }
 
 export function StatsCard({
@@ -19,38 +17,33 @@ export function StatsCard({
   value,
   description,
   icon: Icon,
-  trend,
-  className,
+  change,
+  iconColor,
 }: StatsCardProps) {
   return (
-    <Card className={cn('hover:shadow-lg transition-shadow', className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-        <div className="rounded-full bg-primary/10 p-2">
-          <Icon className="h-4 w-4 text-primary" />
+    <Card className="glass-card border-0 shadow-xl p-6 hover-lift">
+      <div className="flex items-center justify-between mb-4">
+        <div
+          className={cn(
+            'rounded-lg bg-background/50 p-3',
+            iconColor?.replace('text-', 'bg-') + '/10'
+          )}
+        >
+          <Icon className={cn('h-6 w-6 text-neon', iconColor)} />
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        {change && (
+          <Badge className="bg-background/50 text-muted-foreground border-border/50">
+            {change}
+          </Badge>
+        )}
+      </div>
+      <div>
+        <p className="text-sm text-muted-foreground mb-1">{title}</p>
+        <p className="text-3xl font-bold">{value}</p>
         {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          <p className="text-xs text-muted-foreground mt-2">{description}</p>
         )}
-        {trend && (
-          <div className="flex items-center gap-1 mt-2">
-            <span
-              className={cn(
-                'text-xs font-medium',
-                trend.isPositive ? 'text-green-600' : 'text-red-600'
-              )}
-            >
-              {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%
-            </span>
-            <span className="text-xs text-muted-foreground">from last month</span>
-          </div>
-        )}
-      </CardContent>
+      </div>
     </Card>
   )
 }

@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/utils/admin'
-import { AdminNav } from '@/components/admin-nav'
+import { AdminLayout } from '@/components/admin-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,8 @@ import Link from 'next/link'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { License } from '@/types'
+import { Toast } from '@/components/toast'
+import { Suspense } from 'react'
 
 async function blockUser(formData: FormData) {
   'use server'
@@ -25,23 +27,18 @@ async function blockUser(formData: FormData) {
   const { adminClient } = await requireAdmin()
   const userId = formData.get('user_id') as string
 
-  console.log('[USER-BLOCK]', userId)
-
-  // Suspend all user's licenses
   const { error } = await adminClient
     .from('licenses')
-    .update({ status: 'suspended' })
+    .update({ status: 'paused' }) // Use 'paused' instead of 'suspended'
     .eq('user_id', userId)
 
   if (error) {
-    console.error('[USER-BLOCK] Error:', error)
     revalidatePath('/admin/users')
     return redirect('/admin/users?error=' + encodeURIComponent('Failed to block user'))
   }
 
-  console.log('[USER-BLOCK] ✅ Success')
   revalidatePath('/admin/users')
-  redirect('/admin/users?success=' + encodeURIComponent('User blocked successfully'))
+  redirect('/admin/users?success=' + encodeURIComponent('User and their licenses have been paused'))
 }
 
 async function unblockUser(formData: FormData) {
@@ -50,21 +47,17 @@ async function unblockUser(formData: FormData) {
   const { adminClient } = await requireAdmin()
   const userId = formData.get('user_id') as string
 
-  console.log('[USER-UNBLOCK]', userId)
-
-  // Reactivate all user's licenses
   const { error } = await adminClient
     .from('licenses')
     .update({ status: 'active' })
     .eq('user_id', userId)
+    .eq('status', 'paused') // Only unblock paused licenses
 
   if (error) {
-    console.error('[USER-UNBLOCK] Error:', error)
     revalidatePath('/admin/users')
     return redirect('/admin/users?error=' + encodeURIComponent('Failed to unblock user'))
   }
 
-  console.log('[USER-UNBLOCK] ✅ Success')
   revalidatePath('/admin/users')
   redirect('/admin/users?success=' + encodeURIComponent('User unblocked successfully'))
 }
@@ -75,23 +68,19 @@ async function deleteUser(formData: FormData) {
   const { adminClient } = await requireAdmin()
   const userId = formData.get('user_id') as string
 
-  console.log('[USER-DELETE]', userId)
-
-  // Delete all user's licenses and MT5 accounts (cascade)
+  // Supabase is configured with cascading delete, so deleting a user will delete their licenses.
   const { error } = await adminClient
     .from('users')
     .delete()
     .eq('id', userId)
 
   if (error) {
-    console.error('[USER-DELETE] Error:', error)
     revalidatePath('/admin/users')
     return redirect('/admin/users?error=' + encodeURIComponent('Failed to delete user'))
   }
 
-  console.log('[USER-DELETE] ✅ Success')
   revalidatePath('/admin/users')
-  redirect('/admin/users?success=' + encodeURIComponent('User deleted successfully'))
+  redirect('/admin/users?success=' + encodeURIComponent('User and all associated data deleted'))
 }
 
 export default async function UsersPage({
@@ -103,11 +92,13 @@ export default async function UsersPage({
 
   const searchQuery = searchParams.search || ''
 
-  // Get users with license count
   let query = adminClient
     .from('users')
     .select(`
-      *,
+      id,
+      email,
+      full_name,
+      created_at,
       licenses(count, status)
     `)
     .order('created_at', { ascending: false })
@@ -119,15 +110,16 @@ export default async function UsersPage({
   const { data: users } = await query
 
   return (
-    <div className="min-h-screen gradient-bg">
-      <AdminNav userEmail={adminUser.email || ''} />
-
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 page-transition">
+    <AdminLayout user={adminUser}>
+      <Suspense>
+        <Toast />
+      </Suspense>
+      <div className="page-transition">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Users</h1>
+          <h1 className="text-4xl font-bold tracking-tight mb-2 gradient-text">Users</h1>
           <p className="text-muted-foreground">
-            Manage customer accounts and permissions
+            Manage customer accounts and their license status.
           </p>
         </div>
 
@@ -136,15 +128,15 @@ export default async function UsersPage({
           <CardContent className="p-6">
             <form method="get" className="flex gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   name="search"
                   placeholder="Search by email or name..."
                   defaultValue={searchQuery}
-                  className="pl-10 bg-background/50 border-border/50 focus:border-[#CFFF04]"
+                  className="pl-10 bg-background/50 border-border/50 focus:border-neon h-11"
                 />
               </div>
-              <Button type="submit" className="gap-2 bg-gradient-neon hover:opacity-90 text-black">
+              <Button type="submit" className="h-11 gap-2 bg-gradient-neon text-black font-bold button-shine">
                 <Search className="h-4 w-4" />
                 Search
               </Button>
@@ -155,89 +147,81 @@ export default async function UsersPage({
         {/* Users List */}
         <Card className="glass-card border-0 shadow-xl">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UsersIcon className="h-5 w-5 text-[#CFFF04]" />
+            <CardTitle className="flex items-center gap-3">
+              <UsersIcon className="h-6 w-6 text-neon" />
               All Users
             </CardTitle>
             <CardDescription>
-              {users?.length || 0} registered customers
+              {users?.length || 0} registered customers found.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {users && users.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {users.map((user) => {
-                  const licensesArray = Array.isArray(user.licenses) ? user.licenses : []
+                  const licensesArray = (Array.isArray(user.licenses) ? user.licenses : []) as { status: License['status'] }[]
                   const totalLicenses = licensesArray.length
-                  const activeLicenses = licensesArray.filter((l: License) => l.status === 'active').length
-                  const hasBlockedLicense = licensesArray.some((l: License) => l.status === 'suspended')
+                  const activeLicenses = licensesArray.filter((l) => l.status === 'active').length
+                  const hasPausedLicense = licensesArray.some((l) => l.status === 'paused')
 
                   return (
                     <div
                       key={user.id}
-                      className="table-row flex items-center justify-between p-4 rounded-lg border border-border/50"
+                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border border-border/50 hover:bg-background/30 transition-colors"
                     >
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className="h-12 w-12 rounded-full bg-gradient-neon flex items-center justify-center text-black font-bold text-lg">
-                          {user.email.charAt(0).toUpperCase()}
+                      <div className="flex items-center gap-4 flex-1 mb-4 sm:mb-0">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-neon/50 to-neon/80 flex items-center justify-center text-black font-bold text-xl shadow-lg">
+                          {user.email?.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="font-semibold">{user.full_name || 'No Name'}</p>
-                            {hasBlockedLicense && (
-                              <Badge variant="destructive" className="text-xs">
+                            <p className="font-semibold text-foreground">{user.full_name || 'No Name Provided'}</p>
+                            {hasPausedLicense && (
+                              <Badge variant="warning" className="text-xs">
                                 <ShieldOff className="h-3 w-3 mr-1" />
-                                Blocked
+                                Paused
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1.5">
                               <Mail className="h-3 w-3" />
                               {user.email}
                             </span>
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1.5">
                               <Key className="h-3 w-3" />
-                              {activeLicenses}/{totalLicenses} licenses
+                              {activeLicenses} of {totalLicenses} licenses active
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" asChild>
+                      <div className="flex items-center gap-1 w-full sm:w-auto justify-end">
+                        <Button variant="ghost" size="icon" asChild className="hover:bg-background/50 hover:text-neon">
                           <Link href={`/admin/users/${user.id}`}>
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
+                            <Eye className="h-4 w-4" />
                           </Link>
                         </Button>
 
-                        {hasBlockedLicense ? (
+                        {hasPausedLicense ? (
                           <form action={unblockUser}>
                             <input type="hidden" name="user_id" value={user.id} />
-                            <Button variant="ghost" size="sm" type="submit" className="text-green-600 hover:text-green-700">
-                              <Shield className="h-4 w-4 mr-1" />
-                              Unblock
+                            <Button variant="ghost" size="icon" type="submit" className="text-green-500 hover:text-green-400 hover:bg-green-500/10">
+                              <Shield className="h-4 w-4" />
                             </Button>
                           </form>
                         ) : (
                           <form action={blockUser}>
                             <input type="hidden" name="user_id" value={user.id} />
-                            <Button variant="ghost" size="sm" type="submit" className="text-yellow-600 hover:text-yellow-700">
-                              <ShieldOff className="h-4 w-4 mr-1" />
-                              Block
+                            <Button variant="ghost" size="icon" type="submit" className="text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10">
+                              <ShieldOff className="h-4 w-4" />
                             </Button>
                           </form>
                         )}
 
                         <form action={deleteUser}>
                           <input type="hidden" name="user_id" value={user.id} />
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            type="submit"
-                            className="text-red-600 hover:text-red-700"
-                          >
+                          <Button variant="ghost" size="icon" type="submit" className="text-red-500 hover:text-red-400 hover:bg-red-500/10">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </form>
@@ -247,17 +231,17 @@ export default async function UsersPage({
                 })}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <UsersIcon className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
-                <h3 className="text-lg font-semibold mb-1">No users found</h3>
-                <p className="text-sm text-muted-foreground">
-                  {searchQuery ? 'Try a different search term' : 'Users will appear here as they register'}
+              <div className="text-center py-16 text-muted-foreground">
+                <UsersIcon className="mx-auto h-12 w-12 text-neon/50 mb-3" />
+                <h3 className="text-lg font-semibold text-foreground mb-1">No Users Found</h3>
+                <p className="text-sm">
+                  {searchQuery ? 'Try a different search term.' : 'Users will appear here as they register.'}
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   )
 }

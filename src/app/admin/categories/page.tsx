@@ -1,5 +1,5 @@
 import { requireAdmin } from '@/utils/admin'
-import { AdminNav } from '@/components/admin-nav'
+import { AdminLayout } from '@/components/admin-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { Folder, Plus, Trash2 } from 'lucide-react'
+import { Toast } from '@/components/toast'
+import { Suspense } from 'react'
 
 async function createCategory(formData: FormData) {
   'use server'
@@ -19,19 +21,15 @@ async function createCategory(formData: FormData) {
   const icon = formData.get('icon') as string
   const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 
-  console.log('[CATEGORY-CREATE]', { name, slug })
-
   const { error } = await adminClient
     .from('ea_categories')
     .insert({ name, slug, description, icon })
 
   if (error) {
-    console.error('[CATEGORY-CREATE] Error:', error)
     revalidatePath('/admin/categories')
     return redirect('/admin/categories?error=' + encodeURIComponent('Failed to create category'))
   }
 
-  console.log('[CATEGORY-CREATE] ✅ Success')
   revalidatePath('/admin/categories')
   redirect('/admin/categories?success=' + encodeURIComponent('Category created successfully'))
 }
@@ -42,20 +40,16 @@ async function deleteCategory(formData: FormData) {
   const { adminClient } = await requireAdmin()
   const id = formData.get('id') as string
 
-  console.log('[CATEGORY-DELETE]', id)
-
   const { error } = await adminClient
     .from('ea_categories')
     .delete()
     .eq('id', id)
 
   if (error) {
-    console.error('[CATEGORY-DELETE] Error:', error)
     revalidatePath('/admin/categories')
     return redirect('/admin/categories?error=' + encodeURIComponent('Failed to delete category'))
   }
 
-  console.log('[CATEGORY-DELETE] ✅ Success')
   revalidatePath('/admin/categories')
   redirect('/admin/categories?success=' + encodeURIComponent('Category deleted successfully'))
 }
@@ -69,15 +63,16 @@ export default async function CategoriesPage() {
     .order('created_at', { ascending: true })
 
   return (
-    <div className="min-h-screen gradient-bg">
-      <AdminNav userEmail={user.email || ''} />
-
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 page-transition">
+    <AdminLayout user={user}>
+      <Suspense>
+        <Toast />
+      </Suspense>
+      <div className="page-transition">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">EA Categories</h1>
+          <h1 className="text-4xl font-bold tracking-tight mb-2 gradient-text">EA Categories</h1>
           <p className="text-muted-foreground">
-            Organize your Expert Advisors into categories
+            Organize your Expert Advisors into logical groups.
           </p>
         </div>
 
@@ -85,11 +80,11 @@ export default async function CategoriesPage() {
         <Card className="mb-8 glass-card border-0 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-[#CFFF04]" />
+              <Plus className="h-5 w-5 text-neon" />
               Create New Category
             </CardTitle>
             <CardDescription>
-              Add a new category for organizing your EAs
+              Add a new category for organizing your EAs.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -100,9 +95,9 @@ export default async function CategoriesPage() {
                   <Input
                     id="name"
                     name="name"
-                    placeholder="MT5 Scalpers"
+                    placeholder="e.g., Scalping EAs"
                     required
-                    className="bg-background/50 border-border/50 focus:border-[#CFFF04]"
+                    className="h-11 bg-background/50 border-border/50 focus:border-neon"
                   />
                 </div>
 
@@ -113,7 +108,7 @@ export default async function CategoriesPage() {
                     name="icon"
                     placeholder="⚡"
                     maxLength={2}
-                    className="bg-background/50 border-border/50 focus:border-[#CFFF04]"
+                    className="h-11 bg-background/50 border-border/50 focus:border-neon"
                   />
                 </div>
 
@@ -122,14 +117,14 @@ export default async function CategoriesPage() {
                   <Input
                     id="description"
                     name="description"
-                    placeholder="Fast scalping strategies"
-                    className="bg-background/50 border-border/50 focus:border-[#CFFF04]"
+                    placeholder="e.g., High-frequency trading bots"
+                    className="h-11 bg-background/50 border-border/50 focus:border-neon"
                   />
                 </div>
               </div>
 
               <div className="flex justify-end">
-                <Button type="submit" className="gap-2 bg-gradient-neon hover:opacity-90 text-black button-shine">
+                <Button type="submit" className="h-11 gap-2 bg-gradient-neon text-black font-bold button-shine">
                   <Plus className="h-4 w-4" />
                   Create Category
                 </Button>
@@ -142,7 +137,7 @@ export default async function CategoriesPage() {
         <Card className="glass-card border-0 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Folder className="h-5 w-5 text-[#CFFF04]" />
+              <Folder className="h-5 w-5 text-neon" />
               All Categories
             </CardTitle>
             <CardDescription>
@@ -155,13 +150,13 @@ export default async function CategoriesPage() {
                 {categories.map((category) => (
                   <div
                     key={category.id}
-                    className="stat-card glass-card rounded-lg p-4 border border-border/50"
+                    className="glass-card rounded-lg p-4 border border-border/50 hover-lift"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="text-3xl">{category.icon || '📁'}</div>
                         <div>
-                          <h3 className="font-semibold text-lg">{category.name}</h3>
+                          <h3 className="font-semibold text-lg text-foreground">{category.name}</h3>
                           <p className="text-xs text-muted-foreground">{category.slug}</p>
                         </div>
                       </div>
@@ -171,7 +166,7 @@ export default async function CategoriesPage() {
                           type="submit"
                           variant="ghost"
                           size="icon"
-                          className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                          className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -184,7 +179,7 @@ export default async function CategoriesPage() {
                       </p>
                     )}
 
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge className="bg-background/50 text-muted-foreground border-border/50">
                       {category.products?.[0]?.count || 0} EAs
                     </Badge>
                   </div>
@@ -192,16 +187,16 @@ export default async function CategoriesPage() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <Folder className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
+                <Folder className="mx-auto h-12 w-12 text-neon/50 mb-3" />
                 <p className="text-sm text-muted-foreground">No categories yet</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Create your first category above
+                  Create your first category above.
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   )
 }

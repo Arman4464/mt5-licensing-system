@@ -1,9 +1,24 @@
 import { requireAdmin } from '@/utils/admin'
-import { AdminNav } from '@/components/admin-nav'
+import { AdminLayout } from '@/components/admin-layout'
 import { Toast } from '@/components/toast'
 import { Suspense } from 'react'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  FileUp,
+  Clock,
+  Trash2,
+  Play,
+  Pause,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+} from 'lucide-react'
 
 async function batchExtendLicenses(formData: FormData) {
   'use server'
@@ -12,9 +27,9 @@ async function batchExtendLicenses(formData: FormData) {
   
   const days = parseInt(formData.get('days') as string)
   const status = formData.get('status') as string
-  const reactivate = formData.get('reactivate') === 'true'
+  const reactivate = formData.get('reactivate') === 'on'
 
-  if (!days || !status) {
+  if (isNaN(days) || !status) {
     redirect('/admin/batch?error=Days and status required')
   }
 
@@ -32,7 +47,7 @@ async function batchExtendLicenses(formData: FormData) {
     const newExpiry = new Date(currentExpiry)
     newExpiry.setDate(newExpiry.getDate() + days)
     
-    const updateData: Record<string, string> = { expires_at: newExpiry.toISOString() }
+    const updateData: Record<string, any> = { expires_at: newExpiry.toISOString() }
     
     if (reactivate && (license.status === 'suspended' || license.status === 'expired')) {
       updateData.status = 'active'
@@ -62,7 +77,7 @@ async function batchSuspendExpired() {
     .lt('expires_at', new Date().toISOString())
 
   if (!expiredLicenses || expiredLicenses.length === 0) {
-    redirect('/admin/batch?info=No expired licenses found')
+    redirect('/admin/batch?info=No currently active licenses have expired.')
   }
 
   await adminClient
@@ -71,7 +86,7 @@ async function batchSuspendExpired() {
     .in('id', expiredLicenses.map(l => l.id))
 
   revalidatePath('/admin/batch')
-  redirect(`/admin/batch?success=Suspended ${expiredLicenses.length} expired licenses`)
+  redirect(`/admin/batch?success=Set ${expiredLicenses.length} expired licenses to 'expired' status.`)
 }
 
 async function batchDeleteInactive(formData: FormData) {
@@ -121,131 +136,149 @@ export default async function BatchOperationsPage() {
     .eq('status', 'suspended')
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AdminNav userEmail={user.email || ''} />
+    <AdminLayout user={user}>
       <Suspense>
         <Toast />
       </Suspense>
-
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="page-transition">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Batch Operations</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Perform bulk actions on multiple licenses at once
+          <h1 className="text-4xl font-bold tracking-tight mb-2 gradient-text">Batch Operations</h1>
+          <p className="text-muted-foreground">
+            Perform bulk actions on multiple licenses at once. Use with caution.
           </p>
         </div>
 
         {/* Stats Cards */}
         <div className="mb-8 grid gap-6 md:grid-cols-3">
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-            <p className="text-sm font-medium text-gray-600">Active Licenses</p>
-            <p className="mt-2 text-3xl font-bold text-green-600">{activeCount || 0}</p>
-          </div>
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-            <p className="text-sm font-medium text-gray-600">Expired Licenses</p>
-            <p className="mt-2 text-3xl font-bold text-red-600">{expiredCount || 0}</p>
-          </div>
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-            <p className="text-sm font-medium text-gray-600">Suspended Licenses</p>
-            <p className="mt-2 text-3xl font-bold text-yellow-600">{suspendedCount || 0}</p>
-          </div>
-        </div>
-
-        {/* Batch Extend */}
-        <div className="mb-6 rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">🔄 Batch Extend Licenses</h2>
-          <form action={batchExtendLicenses} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-4">
+          <Card className="glass-card border-0 shadow-xl">
+            <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  License Status
-                </label>
-                <select
-                  name="status"
-                  required
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2"
-                >
-                  <option value="active">Active</option>
-                  <option value="suspended">Suspended</option>
-                  <option value="expired">Expired</option>
-                </select>
+                <p className="text-sm text-muted-foreground">Active Licenses</p>
+                <p className="mt-2 text-3xl font-bold text-foreground">{activeCount || 0}</p>
               </div>
+              <div className="p-3 rounded-lg bg-green-500/10">
+                <CheckCircle className="h-6 w-6 text-green-400" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card border-0 shadow-xl">
+            <CardContent className="p-6 flex items-center justify-between">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Extend by (days)
-                </label>
-                <input
-                  type="number"
-                  name="days"
-                  required
-                  min="1"
-                  defaultValue="30"
-                  className="block w-full rounded-md border border-gray-300 px-3 py-2"
-                />
+                <p className="text-sm text-muted-foreground">Expired Licenses</p>
+                <p className="mt-2 text-3xl font-bold text-foreground">{expiredCount || 0}</p>
               </div>
-              <div className="flex items-end">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" name="reactivate" value="true" className="rounded" />
-                  <span className="text-sm text-gray-700">Reactivate</span>
-                </label>
+              <div className="p-3 rounded-lg bg-red-500/10">
+                <XCircle className="h-6 w-6 text-red-400" />
               </div>
-              <div className="flex items-end">
-                <button
-                  type="submit"
-                  className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                  Extend All
-                </button>
+            </CardContent>
+          </Card>
+          <Card className="glass-card border-0 shadow-xl">
+            <CardContent className="p-6 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Suspended Licenses</p>
+                <p className="mt-2 text-3xl font-bold text-foreground">{suspendedCount || 0}</p>
               </div>
-            </div>
-          </form>
+              <div className="p-3 rounded-lg bg-yellow-500/10">
+                <Pause className="h-6 w-6 text-yellow-400" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Batch Suspend Expired */}
-        <div className="mb-6 rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">⏸️ Auto-Suspend Expired Licenses</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Automatically suspend all licenses that have expired
-          </p>
-          <form action={batchSuspendExpired}>
-            <button
-              type="submit"
-              className="rounded-md bg-yellow-600 px-6 py-2 text-sm font-semibold text-white hover:bg-yellow-700"
-            >
-              Suspend All Expired
-            </button>
-          </form>
-        </div>
+        <div className="space-y-8">
+          {/* Batch Extend */}
+          <Card className="glass-card border-0 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Clock className="text-neon" /> Batch Extend Licenses</CardTitle>
+              <CardDescription>Extend the expiry date for a group of licenses.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form action={batchExtendLicenses} className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-4">
+                  <div>
+                    <Label htmlFor="status-extend">License Status</Label>
+                    <select
+                      id="status-extend"
+                      name="status"
+                      required
+                      className="mt-1 block w-full rounded-md bg-background/50 border-border/50 focus:border-neon focus:ring-neon transition-colors h-11 px-3"
+                    >
+                      <option value="active">Active</option>
+                      <option value="suspended">Suspended</option>
+                      <option value="expired">Expired</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="days-extend">Extend by (days)</Label>
+                    <Input
+                      id="days-extend"
+                      type="number"
+                      name="days"
+                      required
+                      min="1"
+                      defaultValue="30"
+                      className="mt-1 h-11 bg-background/50 border-border/50 focus:border-neon"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="reactivate" name="reactivate" className="h-4 w-4 rounded border-border/50 bg-background/50 text-neon focus:ring-neon" />
+                      <Label htmlFor="reactivate" className="text-sm">Reactivate</Label>
+                    </div>
+                  </div>
+                  <div className="flex items-end">
+                    <Button type="submit" className="w-full h-11 bg-gradient-neon text-black font-bold button-shine">
+                      <FileUp className="h-4 w-4 mr-2" /> Extend All
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
 
-        {/* Batch Delete Inactive */}
-        <div className="rounded-lg bg-red-50 p-6 border border-red-200">
-          <h2 className="text-lg font-semibold text-red-900 mb-4">⚠️ Delete Inactive Licenses</h2>
-          <p className="text-sm text-red-700 mb-4">
-            Permanently delete licenses that have been inactive for a specified period
-          </p>
-          <form action={batchDeleteInactive} className="space-y-4">
-            <div className="max-w-xs">
-              <label className="block text-sm font-medium text-red-900 mb-1">
-                Days Inactive
-              </label>
-              <input
-                type="number"
-                name="days"
-                required
-                min="30"
-                defaultValue="90"
-                className="block w-full rounded-md border border-red-300 px-3 py-2"
-              />
-            </div>
-            <button
-              type="submit"
-              className="rounded-md bg-red-600 px-6 py-2 text-sm font-semibold text-white hover:bg-red-700"
-            >
-              Delete Inactive Licenses
-            </button>
-          </form>
+          {/* Batch Suspend Expired */}
+          <Card className="glass-card border-0 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Pause className="text-neon" /> Auto-Set Expired Status</CardTitle>
+              <CardDescription>Find all 'active' licenses with an expiry date in the past and set their status to 'expired'.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form action={batchSuspendExpired}>
+                <Button type="submit" variant="outline" className="h-11 border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10 hover:text-yellow-300">
+                  <Play className="h-4 w-4 mr-2" /> Run Task
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Batch Delete Inactive */}
+          <Card className="glass-card border-red-500/30 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-400"><AlertTriangle /> Delete Inactive Licenses</CardTitle>
+              <CardDescription className="text-red-400/80">Permanently delete 'expired' licenses that have not been updated for a specified period.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form action={batchDeleteInactive} className="flex items-end gap-4">
+                <div>
+                  <Label htmlFor="days-delete" className="text-red-400">Days Inactive</Label>
+                  <Input
+                    id="days-delete"
+                    type="number"
+                    name="days"
+                    required
+                    min="30"
+                    defaultValue="90"
+                    className="mt-1 h-11 bg-background/50 border-red-500/50 focus:border-red-400"
+                  />
+                </div>
+                <Button type="submit" className="h-11 bg-red-600 hover:bg-red-700 text-white font-bold">
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete Inactive
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   )
 }

@@ -45,7 +45,7 @@ export default async function SignUpPage() {
     <div className="min-h-screen gradient-bg flex items-center justify-center p-4">
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#CFFF04] rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-neon rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse delay-1000"></div>
       </div>
 
@@ -82,7 +82,7 @@ export default async function SignUpPage() {
                   type="text"
                   placeholder="John Doe"
                   required
-                  className="h-11 bg-background/50 border-border/50 focus:border-[#CFFF04] transition-colors"
+                  className="h-11 bg-background/50 border-border/50 focus:border-neon transition-colors"
                 />
               </div>
 
@@ -96,7 +96,7 @@ export default async function SignUpPage() {
                   type="email"
                   placeholder="john@example.com"
                   required
-                  className="h-11 bg-background/50 border-border/50 focus:border-[#CFFF04] transition-colors"
+                  className="h-11 bg-background/50 border-border/50 focus:border-neon transition-colors"
                 />
               </div>
 
@@ -111,7 +111,7 @@ export default async function SignUpPage() {
                   placeholder="••••••••"
                   required
                   minLength={6}
-                  className="h-11 bg-background/50 border-border/50 focus:border-[#CFFF04] transition-colors"
+                  className="h-11 bg-background/50 border-border/50 focus:border-neon transition-colors"
                 />
                 <p className="text-xs text-muted-foreground">
                   Must be at least 6 characters
@@ -130,7 +130,7 @@ export default async function SignUpPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Already have an account?{' '}
-                <Link href="/auth/signin" className="text-[#CFFF04] hover:underline font-medium">
+                <Link href="/auth/signin" className="text-neon hover:underline font-medium">
                   Sign In
                 </Link>
               </p>
@@ -141,7 +141,7 @@ export default async function SignUpPage() {
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-muted-foreground">
           <p className="flex items-center justify-center gap-1">
-            <Sparkles className="h-3 w-3 text-[#CFFF04]" />
+            <Sparkles className="h-3 w-3 text-neon" />
             Secured with enterprise-grade encryption
           </p>
         </div>

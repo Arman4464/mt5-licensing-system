@@ -1,5 +1,4 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
+import { login } from './actions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -7,34 +6,11 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { LogIn, Sparkles } from 'lucide-react'
 
-export default async function SignInPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (user) {
-    redirect('/admin')
-  }
-
-  async function signIn(formData: FormData) {
-    'use server'
-
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-
-    const supabase = await createClient()
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-
-    if (error) {
-      redirect('/auth/signin?error=' + encodeURIComponent('Invalid credentials'))
-    }
-
-    redirect('/admin')
-  }
-
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: { message: string }
+}) {
   return (
     <div className="min-h-screen gradient-bg flex items-center justify-center p-4">
       {/* Animated background elements */}
@@ -52,7 +28,7 @@ export default async function SignInPage() {
               Mark<span className="gradient-text">8</span>Pips
             </h1>
           </Link>
-          <p className="text-muted-foreground">Professional MT5 Trading Solutions</p>
+          <p className="text-muted-foreground">Admin & Staff Access</p>
         </div>
 
         {/* Login Card */}
@@ -61,11 +37,11 @@ export default async function SignInPage() {
             <div className="mx-auto w-12 h-12 rounded-full bg-gradient-neon flex items-center justify-center mb-2">
               <LogIn className="h-6 w-6 text-black" />
             </div>
-            <CardTitle className="text-2xl">Welcome Back</CardTitle>
-            <CardDescription>Sign in to manage your EA licenses</CardDescription>
+            <CardTitle className="text-2xl">Admin Portal</CardTitle>
+            <CardDescription>Sign in to access the dashboard</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={signIn} className="space-y-4">
+            <form action={login} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">
                   Email Address
@@ -74,7 +50,7 @@ export default async function SignInPage() {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="mark8pips@example.com"
+                  placeholder="admin@example.com"
                   required
                   className="h-11 bg-background/50 border-border/50 focus:border-[#CFFF04] transition-colors"
                 />
@@ -94,6 +70,12 @@ export default async function SignInPage() {
                 />
               </div>
 
+              {searchParams?.message && (
+                <div className="text-sm text-center text-red-400 bg-red-500/10 p-3 rounded-md border border-red-500/20">
+                  {searchParams.message}
+                </div>
+              )}
+
               <Button 
                 type="submit" 
                 className="w-full h-11 bg-gradient-neon hover:opacity-90 text-black font-semibold button-shine"
@@ -102,21 +84,6 @@ export default async function SignInPage() {
                 Sign In
               </Button>
             </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Don&apos;t have an account?{' '}
-                <Link href="/auth/signup" className="text-[#CFFF04] hover:underline font-medium">
-                  Sign Up
-                </Link>
-              </p>
-            </div>
-
-            <div className="mt-4 text-center">
-              <Link href="/auth/forgot-password" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Forgot your password?
-              </Link>
-            </div>
           </CardContent>
         </Card>
 

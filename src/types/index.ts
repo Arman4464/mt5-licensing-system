@@ -23,12 +23,13 @@ export interface License {
   user_id: string
   product_id: string
   license_key: string
-  status: 'active' | 'paused' | 'revoked' | 'suspended'
+  status: 'active' | 'paused' | 'revoked' | 'suspended' | 'expired' | 'cancelled'
   expires_at: string | null
   created_at: string
-  updated_at: string
-  products?: Product | Product[]
-  mt5_accounts?: MT5Account[]
+  max_accounts: number
+  products?: Product | Product[] | null
+  users?: User | User[] | null
+  mt5_accounts?: MT5Account[] | null
 }
 
 export interface User {

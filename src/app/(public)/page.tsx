@@ -1,145 +1,178 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { ArrowRight, Check, Shield, Zap, BarChart } from 'lucide-react'
 
 export default async function HomePage() {
-  const supabase = createClient(supabaseUrl, supabaseAnonKey)
+  const supabase = await createClient()
   
   const { data: products } = await supabase
     .from('products')
-    .select('*')
+    .select(`
+      *,
+      ea_categories(name, icon)
+    `)
+    .eq('is_featured', true)
     .order('created_at', { ascending: false })
 
+  const features = [
+    {
+      icon: Shield,
+      title: 'Secure Licensing',
+      description: 'Advanced license validation with hardware protection and account limits.',
+    },
+    {
+      icon: Zap,
+      title: 'Instant Activation',
+      description: 'Receive your license key instantly via email. Start trading within minutes.',
+    },
+    {
+      icon: BarChart,
+      title: 'Real-time Analytics',
+      description: 'Track your EA performance with detailed analytics and usage statistics.',
+    },
+  ]
+
   return (
-    <main>
+    <div className="page-transition">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-        <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 gradient-bg opacity-80"></div>
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-neon rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse delay-1000"></div>
+        </div>
+        
+        <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8 z-10">
           <div className="text-center">
-            <h1 className="text-5xl font-bold tracking-tight text-gray-900 sm:text-6xl lg:text-7xl">
+            <h1 className="text-5xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
               Professional MT5
-              <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="block gradient-text">
                 Expert Advisors
               </span>
             </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
               Advanced trading algorithms designed for consistent profits. Fully automated, secure licensing, and professional support.
             </p>
             <div className="mt-10 flex items-center justify-center gap-4">
-              <Link
-                href="#products"
-                className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:opacity-90"
-              >
-                View Products
-              </Link>
-              <Link
-                href="/docs"
-                className="rounded-full border-2 border-gray-300 px-8 py-4 text-lg font-semibold text-gray-700 hover:border-gray-400"
-              >
-                Documentation
-              </Link>
+              <Button asChild size="lg" className="h-12 px-8 text-base bg-gradient-neon text-black font-bold button-shine">
+                <Link href="#products">
+                  View Products
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="h-12 px-8 text-base hover:bg-background/50 hover:border-border/80">
+                <Link href="/docs">
+                  Documentation
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="bg-white py-24">
+      <section id="features" className="py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-900">Why Choose Mark8Pips?</h2>
-            <p className="mt-4 text-gray-600">Industry-leading features for professional traders</p>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold gradient-text">Why Choose Mark8Pips?</h2>
+            <p className="mt-4 text-muted-foreground">Industry-leading features for professional traders</p>
           </div>
           
-          <div className="mt-16 grid gap-8 md:grid-cols-3">
-            <div className="rounded-2xl border border-gray-200 p-8 hover:shadow-lg transition-shadow">
-              <div className="text-4xl">🔐</div>
-              <h3 className="mt-4 text-xl font-semibold text-gray-900">Secure Licensing</h3>
-              <p className="mt-2 text-gray-600">
-                Advanced license validation system with hardware protection and account limits
-              </p>
-            </div>
-            
-            <div className="rounded-2xl border border-gray-200 p-8 hover:shadow-lg transition-shadow">
-              <div className="text-4xl">⚡</div>
-              <h3 className="mt-4 text-xl font-semibold text-gray-900">Instant Activation</h3>
-              <p className="mt-2 text-gray-600">
-                Receive your license key instantly via email. Start trading within minutes
-              </p>
-            </div>
-            
-            <div className="rounded-2xl border border-gray-200 p-8 hover:shadow-lg transition-shadow">
-              <div className="text-4xl">📊</div>
-              <h3 className="mt-4 text-xl font-semibold text-gray-900">Real-time Analytics</h3>
-              <p className="mt-2 text-gray-600">
-                Track your EA performance with detailed analytics and usage statistics
-              </p>
-            </div>
+          <div className="grid gap-8 md:grid-cols-3">
+            {features.map((feature, i) => (
+              <Card key={i} className="glass-card border-0 shadow-xl hover-lift text-center">
+                <CardContent className="p-8">
+                  <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-gradient-neon flex items-center justify-center">
+                    <feature.icon className="h-8 w-8 text-black" />
+                  </div>
+                  <h3 className="mt-4 text-xl font-semibold text-foreground">{feature.title}</h3>
+                  <p className="mt-2 text-muted-foreground">{feature.description}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Products Section */}
-      <section id="products" className="bg-gray-50 py-24">
+      <section id="products" className="py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-900">Our Expert Advisors</h2>
-            <p className="mt-4 text-gray-600">Choose the perfect EA for your trading strategy</p>
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold gradient-text">Featured Expert Advisors</h2>
+            <p className="mt-4 text-muted-foreground">Choose the perfect EA for your trading strategy</p>
           </div>
           
-          <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {products && products.length > 0 ? (
-              products.map((product) => (
-                <div
-                  key={product.id}
-                  className="rounded-2xl border border-gray-200 bg-white p-8 hover:shadow-xl transition-all"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">{product.name}</h3>
-                      <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-                        {product.description || 'Professional trading algorithm'}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Duration:</span>
-                      <span className="font-semibold text-gray-900">
-                        {product.license_duration_days} days
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Max Accounts:</span>
-                      <span className="font-semibold text-gray-900">{product.max_accounts}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 flex items-center justify-between">
-                    <div>
-                      <p className="text-3xl font-bold text-gray-900">${product.price}</p>
-                      <p className="text-xs text-gray-500">one-time payment</p>
-                    </div>
-                    <Link
-                      href={`/product/${product.id}`}
-                      className="rounded-full bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700"
-                    >
-                      Buy Now
-                    </Link>
-                  </div>
-                </div>
-              ))
+              products.map((product) => {
+                const category = Array.isArray(product.ea_categories) 
+                  ? product.ea_categories[0] 
+                  : product.ea_categories
+
+                return (
+                  <Card key={product.id} className="glass-card border-0 shadow-xl hover-lift flex flex-col">
+                    <CardHeader>
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          {category?.icon && (
+                            <span className="text-3xl">{category.icon}</span>
+                          )}
+                        </div>
+                        <Badge className="bg-background/50 text-muted-foreground border-border/50">
+                          {product.platform || 'MT5'}
+                        </Badge>
+                      </div>
+                      <CardTitle className="text-xl text-foreground">{product.name}</CardTitle>
+                      {category && (
+                        <CardDescription>{category.name}</CardDescription>
+                      )}
+                    </CardHeader>
+                    <CardContent className="flex-grow flex flex-col justify-between">
+                      <div className="space-y-4">
+                        {product.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 h-[40px]">
+                            {product.description}
+                          </p>
+                        )}
+                        <ul className="text-sm space-y-2 text-muted-foreground">
+                          {Array.isArray(product.features) && product.features.slice(0, 2).map((feature: string, i: number) => (
+                            <li key={i} className="flex items-center gap-2">
+                              <Check className="h-4 w-4 text-neon" />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="mt-6 flex items-center justify-between">
+                        <div>
+                          <p className="text-3xl font-bold gradient-text">
+                            ₹{product.price}
+                          </p>
+                          <p className="text-xs text-muted-foreground">one-time payment</p>
+                        </div>
+                        <Button asChild className="bg-gradient-neon text-black font-bold button-shine">
+                          <Link href={`/checkout/${product.id}`}>
+                            Buy Now <ArrowRight className="h-4 w-4 ml-2" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })
             ) : (
-              <div className="col-span-3 text-center py-12 text-gray-500">
-                No products available yet
-              </div>
+              <Card className="col-span-3 glass-card border-0 shadow-xl text-center py-16">
+                <CardContent>
+                  <h3 className="text-lg font-semibold text-foreground">No featured products available</h3>
+                  <p className="text-sm text-muted-foreground mt-2">Please check back later.</p>
+                </CardContent>
+              </Card>
             )}
           </div>
         </div>
       </section>
-    </main>
+    </div>
   )
 }

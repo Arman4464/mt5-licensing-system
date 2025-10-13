@@ -5,7 +5,8 @@ import { notFound } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Key, Activity, Copy } from 'lucide-react'
+import { CopyLicenseButton } from '@/components/copy-license-button'
+import { ArrowLeft, Key, Activity } from 'lucide-react'
 
 export default async function LicenseDetailPage({
   params,
@@ -71,13 +72,7 @@ export default async function LicenseDetailPage({
                   <code className="text-sm font-mono bg-muted px-3 py-2 rounded-md flex-1">
                     {license.license_key}
                   </code>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => navigator.clipboard.writeText(license.license_key)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                  <CopyLicenseButton licenseKey={license.license_key} />
                 </div>
               </div>
 
