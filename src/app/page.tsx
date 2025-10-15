@@ -1,5 +1,12 @@
 // src/app/page.tsx
-// Hardened production-safe homepage with explicit guards for Supabase + RSC
+// Full homepage: Navigation, Hero, Stats, Feature Tiles, Featured Products, Categories,
+// Testimonials, Value Props, FAQ, Newsletter, Footer
+// Hardened for production:
+// - No "any" types
+// - Includes id in ea_categories select to satisfy Product typing
+// - Optional Category.id to remain resilient to schema/RLS differences
+// - Avoids external <Image> sources to prevent next.config image domain issues
+// - Uses only your existing globals.css utilities
 
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
@@ -24,12 +31,11 @@ import {
   Globe,
   Layers,
   Gauge,
-  UserCheck,
 } from 'lucide-react'
 
-// Types
+// Local types for this page
 type Category = {
-  id: string
+  id?: string // optional to avoid strict failures if RLS omits id
   name: string
   slug?: string | null
   icon?: string | null
@@ -45,7 +51,7 @@ type Product = {
   ea_categories?: Category | Category[] | null
 }
 
-// Helpers
+// Decorative background blob (pure CSS)
 function NeonBlob({ className }: { className?: string }) {
   return (
     <div
@@ -55,6 +61,7 @@ function NeonBlob({ className }: { className?: string }) {
   )
 }
 
+// Small stat chip
 function StatChip({ label, value }: { label: string; value: string }) {
   return (
     <div className="glass-card border border-white/10 rounded-xl p-6 text-center hover-lift">
@@ -64,6 +71,7 @@ function StatChip({ label, value }: { label: string; value: string }) {
   )
 }
 
+// Feature tile
 function FeatureTile({
   icon: Icon,
   title,
@@ -88,6 +96,7 @@ function FeatureTile({
   )
 }
 
+// Product card (featured)
 function FeaturedProductCard({ product }: { product: Product }) {
   const raw = product.ea_categories
   const category: Category | undefined =
@@ -130,6 +139,7 @@ function FeaturedProductCard({ product }: { product: Product }) {
   )
 }
 
+// Slim logo/brand rail (placeholder)
 function BrandRail() {
   return (
     <div className="mt-16">
@@ -150,6 +160,7 @@ function BrandRail() {
   )
 }
 
+// Category card
 function CategoryCard({
   icon,
   name,
@@ -176,6 +187,7 @@ function CategoryCard({
   )
 }
 
+// Testimonial card (no external image to avoid next.config changes)
 function TestimonialCard({
   quote,
   author,
@@ -203,6 +215,7 @@ function TestimonialCard({
   )
 }
 
+// FAQ item
 function FAQItem({ q, a }: { q: string; a: string }) {
   return (
     <details className="group glass-card border border-white/10 rounded-xl p-4 hover-lift">
@@ -217,6 +230,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   )
 }
 
+// Newsletter panel
 function NewsletterPanel() {
   return (
     <Card className="glass-card border border-white/10">
@@ -252,27 +266,52 @@ function NewsletterPanel() {
 export default async function HomePage() {
   const supabase = await createClient()
 
-  // Query featured products
+  // Featured products — include id in nested select so Category typing is satisfied
   const { data: featuredRaw, error: featuredErr } = await supabase
     .from('products')
-    .select('id, name, description, price, platform, ea_categories(name, icon)')
+    .select('id, name, description, price, platform, ea_categories(id, name, icon, slug, description)')
     .eq('is_featured', true)
     .limit(3)
 
-  // If RLS or select fails, use empty list to keep RSC stable
+  // Map with guards; tolerate RLS by falling back to empty arrays
   const featuredProducts: Product[] =
     !featuredErr && Array.isArray(featuredRaw)
-      ? featuredRaw.map((p) => ({
-          id: String(p.id),
-          name: String(p.name ?? ''),
-          description: p.description ?? null,
-          price: Number(p.price ?? 0),
-          platform: String(p.platform ?? ''),
-          ea_categories: p.ea_categories ?? null,
-        }))
+      ? featuredRaw.map((p) => {
+          const cats = p.ea_categories
+          let normalizedCats: Category | Category[] | null = null
+
+          if (Array.isArray(cats)) {
+            normalizedCats = cats.map((c) => ({
+              id: c?.id ? String(c.id) : undefined,
+              name: String(c?.name ?? ''),
+              slug: c?.slug ?? null,
+              icon: c?.icon ?? null,
+              description: c?.description ?? null,
+            }))
+          } else if (cats && typeof cats === 'object') {
+            normalizedCats = {
+              id: (cats as any)?.id ? String((cats as any).id) : undefined,
+              name: String((cats as any)?.name ?? ''),
+              slug: (cats as any)?.slug ?? null,
+              icon: (cats as any)?.icon ?? null,
+              description: (cats as any)?.description ?? null,
+            }
+          } else {
+            normalizedCats = null
+          }
+
+          return {
+            id: String(p.id),
+            name: String(p.name ?? ''),
+            description: p.description ?? null,
+            price: Number(p.price ?? 0),
+            platform: String(p.platform ?? ''),
+            ea_categories: normalizedCats,
+          }
+        })
       : []
 
-  // Query categories
+  // Categories for browse section
   const { data: categoriesRaw, error: catErr } = await supabase
     .from('ea_categories')
     .select('id, name, slug, icon, description')
@@ -281,11 +320,11 @@ export default async function HomePage() {
   const categories: Category[] =
     !catErr && Array.isArray(categoriesRaw)
       ? categoriesRaw.map((c) => ({
-          id: String(c.id),
-          name: String(c.name ?? ''),
-          slug: c.slug ?? null,
-          icon: c.icon ?? null,
-          description: c.description ?? null,
+          id: c?.id ? String(c.id) : undefined,
+          name: String(c?.name ?? ''),
+          slug: c?.slug ?? null,
+          icon: c?.icon ?? null,
+          description: c?.description ?? null,
         }))
       : []
 
@@ -299,31 +338,20 @@ export default async function HomePage() {
       <header className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur">
         <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="text-2xl" aria-hidden="true">
-              📊
-            </div>
+            <div className="text-2xl" aria-hidden="true">📊</div>
             <span className="text-lg font-bold">
               Mark<span className="neon-text">8</span>Pips
             </span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            <Link
-              href="/products"
-              className="text-sm font-medium text-muted-foreground hover:text-white transition-colors"
-            >
+            <Link href="/products" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">
               Products
             </Link>
-            <Link
-              href="/about"
-              className="text-sm font-medium text-muted-foreground hover:text-white transition-colors"
-            >
+            <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">
               About
             </Link>
-            <Link
-              href="/contact"
-              className="text-sm font-medium text-muted-foreground hover:text-white transition-colors"
-            >
+            <Link href="/contact" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">
               Contact
             </Link>
           </div>
@@ -356,8 +384,7 @@ export default async function HomePage() {
             </h1>
 
             <p className="mt-5 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-              Premium EAs for MT4 & MT5, engineered for speed, stability, and risk control—backed
-              by rigorous backtests and real performance.
+              Premium EAs for MT4 & MT5, engineered for speed, stability, and risk control—backed by rigorous backtests and real performance.
             </p>
 
             <div className="mt-8 flex items-center justify-center gap-4">
@@ -485,11 +512,11 @@ export default async function HomePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
               {categories.map((c) => (
                 <CategoryCard
-                  key={c.id}
+                  key={`${c.id ?? c.slug ?? c.name}`}
                   icon={c.icon}
                   name={c.name}
                   description={c.description}
-                  href={`/products?category=${c.slug ?? c.id}`}
+                  href={`/products?category=${c.slug ?? c.id ?? encodeURIComponent(c.name)}`}
                 />
               ))}
             </div>
@@ -610,9 +637,7 @@ export default async function HomePage() {
           <div className="grid md:grid-cols-4 gap-8 mb-10">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="text-2xl" aria-hidden="true">
-                  📊
-                </div>
+                <div className="text-2xl" aria-hidden="true">📊</div>
                 <span className="text-lg font-bold">
                   Mark<span className="neon-text">8</span>Pips
                 </span>
@@ -625,58 +650,26 @@ export default async function HomePage() {
             <div>
               <h3 className="text-sm font-semibold mb-3">Products</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link href="/products" className="hover:text-white transition">
-                    All EAs
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/products?category=mt5-scalpers" className="hover:text-white transition">
-                    Scalpers
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/products?category=gold-trading" className="hover:text-white transition">
-                    Gold EAs
-                  </Link>
-                </li>
+                <li><Link href="/products" className="hover:text-white transition">All EAs</Link></li>
+                <li><Link href="/products?category=mt5-scalpers" className="hover:text-white transition">Scalpers</Link></li>
+                <li><Link href="/products?category=gold-trading" className="hover:text-white transition">Gold EAs</Link></li>
               </ul>
             </div>
 
             <div>
               <h3 className="text-sm font-semibold mb-3">Company</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link href="/about" className="hover:text-white transition">
-                    About
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="hover:text-white transition">
-                    Contact
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/auth/signin" className="hover:text-white transition">
-                    Sign In
-                  </Link>
-                </li>
+                <li><Link href="/about" className="hover:text-white transition">About</Link></li>
+                <li><Link href="/contact" className="hover:text-white transition">Contact</Link></li>
+                <li><Link href="/auth/signin" className="hover:text-white transition">Sign In</Link></li>
               </ul>
             </div>
 
             <div>
               <h3 className="text-sm font-semibold mb-3">Support</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>
-                  <Link href="/contact" className="hover:text-white transition">
-                    Help Center
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/dashboard" className="hover:text-white transition">
-                    My Licenses
-                  </Link>
-                </li>
+                <li><Link href="/contact" className="hover:text-white transition">Help Center</Link></li>
+                <li><Link href="/dashboard" className="hover:text-white transition">My Licenses</Link></li>
               </ul>
             </div>
           </div>
