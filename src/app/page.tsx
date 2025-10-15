@@ -1,10 +1,23 @@
-// src/app/(public)/page.tsx
-// PART 1 OF 2 — Navigation, Hero, Stats, Feature Cards, Featured Products
+// src/app/page.tsx
+// Full homepage: Navigation, Hero, Stats, Feature Tiles, Featured Products, Categories,
+// Testimonials, Value Props, FAQ, Newsletter, Footer
+// Notes:
+// - No "any" types are used (fixes @typescript-eslint/no-explicit-any).
+// - Next/Image is used instead of <img> to satisfy @next/next/no-img-element.
+// - Uses your existing utilities from globals.css: glass-card, gradient-bg, gradient-text,
+//   button-shine, neon-text, hover-lift, page-transition.
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/utils/supabase/server'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   ArrowRight,
@@ -18,29 +31,39 @@ import {
   Globe,
   Layers,
   Gauge,
+  UserCheck,
 } from 'lucide-react'
 
-// Decorative background blobs (pure CSS, no external deps)
+// Minimal data types to avoid any
+type Category = {
+  id: string
+  name: string
+  slug?: string | null
+  icon?: string | null
+  description?: string | null
+}
+
+type Product = {
+  id: string
+  name: string
+  description?: string | null
+  price: number
+  platform: string
+  ea_categories?: Category | Category[]
+}
+
+// Decorative background blob (pure CSS)
 function NeonBlob({ className }: { className?: string }) {
   return (
     <div
-      className={`
-        pointer-events-none absolute rounded-full blur-3xl opacity-20 mix-blend-screen
-        ${className || ''}
-      `}
+      className={`pointer-events-none absolute rounded-full blur-3xl opacity-20 mix-blend-screen ${className || ''}`}
       aria-hidden="true"
     />
   )
 }
 
 // Small stat chip
-function StatChip({
-  label,
-  value,
-}: {
-  label: string
-  value: string
-}) {
+function StatChip({ label, value }: { label: string; value: string }) {
   return (
     <div className="glass-card border border-white/10 rounded-xl p-6 text-center hover-lift">
       <p className="text-4xl md:text-5xl font-extrabold neon-text">{value}</p>
@@ -56,7 +79,7 @@ function FeatureTile({
   desc,
   accentClass,
 }: {
-  icon: typeof Cpu
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   title: string
   desc: string
   accentClass: string
@@ -75,13 +98,11 @@ function FeatureTile({
 }
 
 // Product card (featured)
-function FeaturedProductCard({
-  product,
-}: {
-  product: any
-}) {
-  const category =
-    Array.isArray(product?.ea_categories) ? product.ea_categories[0] : product?.ea_categories
+function FeaturedProductCard({ product }: { product: Product }) {
+  const raw = product.ea_categories
+  const category: Category | undefined = Array.isArray(raw)
+    ? raw[0]
+    : raw || undefined
 
   return (
     <Link href={`/products/${product.id}`} className="block h-full">
@@ -89,7 +110,11 @@ function FeaturedProductCard({
         <CardHeader className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {category?.icon && <span className="text-2xl" aria-hidden="true">{category.icon}</span>}
+              {category?.icon ? (
+                <span className="text-2xl" aria-hidden="true">
+                  {category.icon}
+                </span>
+              ) : null}
               <Badge variant={product.platform === 'MT5' ? 'default' : 'secondary'}>
                 {product.platform}
               </Badge>
@@ -97,10 +122,12 @@ function FeaturedProductCard({
             <Star className="h-4 w-4 neon-text" />
           </div>
           <CardTitle className="text-2xl leading-snug">{product.name}</CardTitle>
-          {category?.name && <CardDescription>{category.name}</CardDescription>}
+          {category?.name ? <CardDescription>{category.name}</CardDescription> : null}
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground line-clamp-3">{product.description}</p>
+          <p className="text-sm text-muted-foreground line-clamp-3">
+            {String(product.description || '')}
+          </p>
           <div className="flex items-center justify-between">
             <p className="text-2xl font-extrabold neon-text">₹{product.price}</p>
             <Button size="sm" className="bg-gradient-neon text-black button-shine">
@@ -124,7 +151,7 @@ function BrandRail() {
       <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4 opacity-80">
         {Array.from({ length: 6 }).map((_, i) => (
           <div
-            key={i}
+            key={`brand-${i}`}
             className="glass-card border border-white/10 rounded-lg py-6 text-center text-muted-foreground"
           >
             <span className="text-sm">Brand {i + 1}</span>
@@ -142,9 +169,9 @@ function CategoryCard({
   description,
   href,
 }: {
-  icon?: string
+  icon?: string | null
   name: string
-  description?: string
+  description?: string | null
   href: string
 }) {
   return (
@@ -153,14 +180,16 @@ function CategoryCard({
         <CardContent className="p-6 text-center flex flex-col items-center gap-2">
           <div className="text-5xl leading-none">{icon || '📁'}</div>
           <h3 className="mt-2 text-base font-semibold">{name}</h3>
-          <p className="text-xs text-muted-foreground">{description || 'Well‑tuned strategies'}</p>
+          <p className="text-xs text-muted-foreground">
+            {description || 'Well‑tuned strategies'}
+          </p>
         </CardContent>
       </Card>
     </Link>
   )
 }
 
-// Testimonial card
+// Testimonial card (uses Next/Image for lint)
 function TestimonialCard({
   quote,
   author,
@@ -177,8 +206,18 @@ function TestimonialCard({
       <CardContent className="p-6 space-y-4">
         <p className="text-sm leading-relaxed text-gray-200">“{quote}”</p>
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden">
-            {avatar ? <img src={avatar} alt={author} className="h-full w-full object-cover" /> : <span className="text-lg">👤</span>}
+          <div className="h-10 w-10 rounded-full bg-white/10 overflow-hidden relative">
+            {avatar ? (
+              <Image
+                src={avatar}
+                alt={author}
+                fill
+                className="object-cover"
+                sizes="40px"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-lg">👤</div>
+            )}
           </div>
           <div>
             <div className="text-sm font-medium">{author}</div>
@@ -190,14 +229,8 @@ function TestimonialCard({
   )
 }
 
-// Simple FAQ item (no extra deps)
-function FAQItem({
-  q,
-  a,
-}: {
-  q: string
-  a: string
-}) {
+// Simple FAQ item
+function FAQItem({ q, a }: { q: string; a: string }) {
   return (
     <details className="group glass-card border border-white/10 rounded-xl p-4 hover-lift">
       <summary className="cursor-pointer list-none text-sm font-semibold flex items-center justify-between">
@@ -211,7 +244,7 @@ function FAQItem({
   )
 }
 
-// Newsletter panel (non-blocking UI)
+// Newsletter panel
 function NewsletterPanel() {
   return (
     <Card className="glass-card border border-white/10">
@@ -223,7 +256,7 @@ function NewsletterPanel() {
               Strategy insights, performance notes, and new EA launches—no spam.
             </p>
           </div>
-          <form className="w-full md:w-auto flex items-center gap-3">
+          <form className="w-full md:w-auto flex items-center gap-3" action="#" onSubmit={(e) => e.preventDefault()}>
             <input
               type="email"
               required
@@ -244,21 +277,42 @@ export default async function HomePage() {
   const supabase = await createClient()
 
   // Featured products
-  const { data: featuredProducts } = await supabase
+  const { data: featuredProductsRaw } = await supabase
     .from('products')
     .select('*, ea_categories(name, icon)')
     .eq('is_featured', true)
     .limit(3)
 
-  // Categories (used in Part 2; fetched early to avoid extra roundtrips)
-  const { data: categories } = await supabase
+  const featuredProducts: Product[] = Array.isArray(featuredProductsRaw)
+    ? featuredProductsRaw.map((p) => ({
+        id: String(p.id),
+        name: String(p.name),
+        description: p.description ?? null,
+        price: Number(p.price ?? 0),
+        platform: String(p.platform ?? ''),
+        ea_categories: p.ea_categories as Product['ea_categories'],
+      }))
+    : []
+
+  // Categories
+  const { data: categoriesRaw } = await supabase
     .from('ea_categories')
     .select('*')
     .order('name', { ascending: true })
 
+  const categories: Category[] = Array.isArray(categoriesRaw)
+    ? categoriesRaw.map((c) => ({
+        id: String(c.id),
+        name: String(c.name),
+        slug: c.slug ?? null,
+        icon: c.icon ?? null,
+        description: c.description ?? null,
+      }))
+    : []
+
   return (
     <div className="relative min-h-screen gradient-bg text-white overflow-clip">
-      {/* Hero decorative blobs */}
+      {/* Decorative blobs */}
       <NeonBlob className="top-[-10%] left-[-10%] w-[36rem] h-[36rem] bg-[rgba(207,255,4,0.6)]" />
       <NeonBlob className="bottom-[-10%] right-[-10%] w-[42rem] h-[42rem] bg-[rgba(56,189,248,0.45)]" />
 
@@ -303,7 +357,7 @@ export default async function HomePage() {
         <div className="page-transition">
           <div className="text-center">
             <Badge className="mb-4 bg-white/5 text-white border-white/10">
-              Enterprise-grade automation • Instant activation • Lifetime updates
+              Enterprise‑grade automation • Instant activation • Lifetime updates
             </Badge>
 
             <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight">
@@ -312,7 +366,7 @@ export default async function HomePage() {
             </h1>
 
             <p className="mt-5 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-              Premium EAs for MT4 & MT5, engineered for speed, stability, and risk control—backed by rigorous backtests and real performance. 
+              Premium EAs for MT4 & MT5, engineered for speed, stability, and risk control—backed by rigorous backtests and real performance.
             </p>
 
             <div className="mt-8 flex items-center justify-center gap-4">
@@ -372,7 +426,7 @@ export default async function HomePage() {
             />
           </div>
 
-          {/* Secondary row of features */}
+          {/* Secondary row */}
           <div className="grid md:grid-cols-3 gap-6 mt-6">
             <FeatureTile
               icon={Cpu}
@@ -397,7 +451,7 @@ export default async function HomePage() {
       </section>
 
       {/* Featured products */}
-      {featuredProducts && featuredProducts.length > 0 && (
+      {featuredProducts.length > 0 && (
         <section className="py-20 border-t border-white/10">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
@@ -412,7 +466,7 @@ export default async function HomePage() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              {featuredProducts.map((product: any) => (
+              {featuredProducts.map((product) => (
                 <FeaturedProductCard key={product.id} product={product} />
               ))}
             </div>
@@ -429,8 +483,8 @@ export default async function HomePage() {
         </section>
       )}
 
-            {/* Categories (Browse by category) */}
-      {categories && categories.length > 0 && (
+      {/* Categories */}
+      {categories.length > 0 && (
         <section className="py-20 border-t border-white/10">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
@@ -440,13 +494,13 @@ export default async function HomePage() {
               </p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-              {categories.map((c: any) => (
+              {categories.map((c) => (
                 <CategoryCard
                   key={c.id}
                   icon={c.icon}
                   name={c.name}
                   description={c.description}
-                  href={`/products?category=${c.slug}`}
+                  href={`/products?category=${c.slug ?? c.id}`}
                 />
               ))}
             </div>
@@ -454,7 +508,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Social proof / Testimonials */}
+      {/* Testimonials */}
       <section className="py-20 border-t border-white/10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -483,7 +537,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Value props (inspired by Linear/Vercel clarity) */}
+      {/* Value props */}
       <section className="py-20 border-t border-white/10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-6">
@@ -561,7 +615,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Footer (clean, professional) */}
+      {/* Footer */}
       <footer className="border-t border-white/10 py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8 mb-10">
@@ -609,7 +663,6 @@ export default async function HomePage() {
           </div>
         </div>
       </footer>
-
     </div>
   )
 }
