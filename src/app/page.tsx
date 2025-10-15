@@ -1,8 +1,8 @@
 // src/app/page.tsx
-// Production-safe: renders even if Supabase fails
+// Force dynamic rendering to avoid static build errors with Supabase cookies
+export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -17,7 +17,6 @@ import {
   Zap,
   Shield,
   TrendingUp,
-  Star,
   Cpu,
   LineChart,
   Sparkles,
@@ -25,23 +24,7 @@ import {
   Layers,
   Gauge,
 } from 'lucide-react'
-
-type Category = {
-  id?: string
-  name: string
-  slug?: string | null
-  icon?: string | null
-  description?: string | null
-}
-
-type Product = {
-  id: string
-  name: string
-  description?: string | null
-  price: number
-  platform: string
-  ea_categories?: Category | Category[] | null
-}
+import { NewsletterForm } from '@/components/newsletter-form'
 
 function NeonBlob({ className }: { className?: string }) {
   return (
@@ -82,26 +65,6 @@ function FeatureTile({
         <CardDescription className="leading-relaxed">{desc}</CardDescription>
       </CardHeader>
     </Card>
-  )
-}
-
-function BrandRail() {
-  return (
-    <div className="mt-16">
-      <div className="text-center text-xs uppercase tracking-wider text-muted-foreground">
-        Trusted by traders worldwide
-      </div>
-      <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4 opacity-80">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={`brand-${i}`}
-            className="glass-card border border-white/10 rounded-lg py-6 text-center text-muted-foreground"
-          >
-            <span className="text-sm">Brand {i + 1}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }
 
@@ -146,83 +109,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   )
 }
 
-function NewsletterPanel() {
-  return (
-    <Card className="glass-card border border-white/10">
-      <CardContent className="p-8 md:p-10">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div>
-            <h3 className="text-2xl font-bold">Get Alpha Updates</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Strategy insights, performance notes, and new EA launches—no spam.
-            </p>
-          </div>
-          <form
-            className="w-full md:w-auto flex items-center gap-3"
-            action="#"
-            onSubmit={(e) => e.preventDefault()}
-          >
-            <input
-              type="email"
-              required
-              placeholder="you@trader.com"
-              className="w-full md:w-72 h-11 rounded-md bg-white/5 border border-white/10 px-3 text-sm outline-none focus:border-white/30"
-            />
-            <Button type="submit" className="h-11 bg-gradient-neon text-black button-shine">
-              Subscribe
-            </Button>
-          </form>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-export default async function HomePage() {
-  // Always render the page, even if Supabase fails
-  let featuredProducts: Product[] = []
-  let categories: Category[] = []
-
-  try {
-    const supabase = await createClient()
-
-    // Try to fetch - if it fails, we just show empty sections
-    const { data: productsData } = await supabase
-      .from('products')
-      .select('id, name, description, price, platform')
-      .eq('is_featured', true)
-      .limit(3)
-
-    if (productsData) {
-      featuredProducts = productsData.map((p) => ({
-        id: String(p.id),
-        name: String(p.name ?? 'Untitled EA'),
-        description: p.description ?? null,
-        price: Number(p.price ?? 0),
-        platform: String(p.platform ?? 'MT5'),
-        ea_categories: null,
-      }))
-    }
-
-    const { data: catsData } = await supabase
-      .from('ea_categories')
-      .select('id, name, slug, icon, description')
-      .order('name', { ascending: true })
-
-    if (catsData) {
-      categories = catsData.map((c) => ({
-        id: String(c.id),
-        name: String(c.name ?? ''),
-        slug: c.slug ?? null,
-        icon: c.icon ?? null,
-        description: c.description ?? null,
-      }))
-    }
-  } catch (err) {
-    console.error('Supabase query failed:', err)
-    // Page still renders with empty data
-  }
-
+export default function HomePage() {
   return (
     <div className="relative min-h-screen gradient-bg text-white overflow-clip">
       <NeonBlob className="top-[-10%] left-[-10%] w-[36rem] h-[36rem] bg-[rgba(207,255,4,0.6)]" />
@@ -266,41 +153,37 @@ export default async function HomePage() {
 
       {/* Hero */}
       <section className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-16 pb-14">
-        <div className="page-transition">
-          <div className="text-center">
-            <Badge className="mb-4 bg-white/5 text-white border-white/10">
-              Enterprise‑grade automation • Instant activation • Lifetime updates
-            </Badge>
+        <div className="page-transition text-center">
+          <Badge className="mb-4 bg-white/5 text-white border-white/10">
+            Enterprise‑grade automation • Instant activation • Lifetime updates
+          </Badge>
 
-            <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight">
-              Trade Smarter with
-              <span className="block mt-2 gradient-text">AI‑Powered Expert Advisors</span>
-            </h1>
+          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight">
+            Trade Smarter with
+            <span className="block mt-2 gradient-text">AI‑Powered Expert Advisors</span>
+          </h1>
 
-            <p className="mt-5 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-              Premium EAs for MT4 &amp; MT5, engineered for speed, stability, and risk control—backed by rigorous backtests and real performance.
-            </p>
+          <p className="mt-5 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+            Premium EAs for MT4 &amp; MT5, engineered for speed, stability, and risk control—backed by rigorous backtests and real performance.
+          </p>
 
-            <div className="mt-8 flex items-center justify-center gap-4">
-              <Button size="lg" asChild className="bg-gradient-neon text-black button-shine">
-                <Link href="/products">
-                  Explore Products
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href="/about">Learn More</Link>
-              </Button>
-            </div>
+          <div className="mt-8 flex items-center justify-center gap-4">
+            <Button size="lg" asChild className="bg-gradient-neon text-black button-shine">
+              <Link href="/products">
+                Explore Products
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/about">Learn More</Link>
+            </Button>
+          </div>
 
-            <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-5 max-w-4xl mx-auto">
-              <StatChip label="Active Traders" value="500+" />
-              <StatChip label="Total Profits" value="₹2M+" />
-              <StatChip label="User Rating" value="4.9★" />
-              <StatChip label="Support" value="24/7" />
-            </div>
-
-            <BrandRail />
+          <div className="mt-14 grid grid-cols-2 md:grid-cols-4 gap-5 max-w-4xl mx-auto">
+            <StatChip label="Active Traders" value="500+" />
+            <StatChip label="Total Profits" value="₹2M+" />
+            <StatChip label="User Rating" value="4.9★" />
+            <StatChip label="Support" value="24/7" />
           </div>
         </div>
       </section>
@@ -316,45 +199,15 @@ export default async function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            <FeatureTile
-              icon={Zap}
-              title="Lightning Fast"
-              desc="Ultra‑optimized execution &amp; minimal latency to ensure entries and exits are never missed."
-              accentClass="bg-blue-500/15 text-blue-400"
-            />
-            <FeatureTile
-              icon={Shield}
-              title="Risk Management"
-              desc="Position sizing, stop logic, equity guards, and drawdown controls for safer automation."
-              accentClass="bg-emerald-500/15 text-emerald-400"
-            />
-            <FeatureTile
-              icon={TrendingUp}
-              title="Proven Results"
-              desc="Backtested strategies with robust metrics, validated on multiple symbols &amp; regimes."
-              accentClass="bg-lime-400/15 text-lime-300"
-            />
+            <FeatureTile icon={Zap} title="Lightning Fast" desc="Ultra‑optimized execution &amp; minimal latency to ensure entries and exits are never missed." accentClass="bg-blue-500/15 text-blue-400" />
+            <FeatureTile icon={Shield} title="Risk Management" desc="Position sizing, stop logic, equity guards, and drawdown controls for safer automation." accentClass="bg-emerald-500/15 text-emerald-400" />
+            <FeatureTile icon={TrendingUp} title="Proven Results" desc="Backtested strategies with robust metrics, validated on multiple symbols &amp; regimes." accentClass="bg-lime-400/15 text-lime-300" />
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 mt-6">
-            <FeatureTile
-              icon={Cpu}
-              title="Smart Engines"
-              desc="Adaptive logic reacts to market volatility, sessions, and liquidity for cleaner signals."
-              accentClass="bg-fuchsia-500/15 text-fuchsia-400"
-            />
-            <FeatureTile
-              icon={LineChart}
-              title="Analytics Ready"
-              desc="Transparent performance reporting &amp; exportable logs for your analysis workflow."
-              accentClass="bg-sky-500/15 text-sky-400"
-            />
-            <FeatureTile
-              icon={Layers}
-              title="Stack Friendly"
-              desc="Works seamlessly with your current brokers, VPS setups, and risk dashboards."
-              accentClass="bg-amber-500/15 text-amber-400"
-            />
+            <FeatureTile icon={Cpu} title="Smart Engines" desc="Adaptive logic reacts to market volatility, sessions, and liquidity for cleaner signals." accentClass="bg-fuchsia-500/15 text-fuchsia-400" />
+            <FeatureTile icon={LineChart} title="Analytics Ready" desc="Transparent performance reporting &amp; exportable logs for your analysis workflow." accentClass="bg-sky-500/15 text-sky-400" />
+            <FeatureTile icon={Layers} title="Stack Friendly" desc="Works seamlessly with your current brokers, VPS setups, and risk dashboards." accentClass="bg-amber-500/15 text-amber-400" />
           </div>
         </div>
       </section>
@@ -369,21 +222,9 @@ export default async function HomePage() {
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
-            <TestimonialCard
-              quote="Execution is razor sharp, and the built‑in risk limits saved my month during a volatile spike."
-              author="Rajesh P."
-              role="Gold &amp; Indices"
-            />
-            <TestimonialCard
-              quote="Setup took minutes. Support clarified session filters and my scalper started printing."
-              author="Elena V."
-              role="Scalper User"
-            />
-            <TestimonialCard
-              quote="Consistent behavior across brokers with smart filters—exactly what I needed for prop rules."
-              author="Marco D."
-              role="Funded Account"
-            />
+            <TestimonialCard quote="Execution is razor sharp, and the built‑in risk limits saved my month during a volatile spike." author="Rajesh P." role="Gold &amp; Indices" />
+            <TestimonialCard quote="Setup took minutes. Support clarified session filters and my scalper started printing." author="Elena V." role="Scalper User" />
+            <TestimonialCard quote="Consistent behavior across brokers with smart filters—exactly what I needed for prop rules." author="Marco D." role="Funded Account" />
           </div>
         </div>
       </section>
@@ -398,9 +239,7 @@ export default async function HomePage() {
                   <Gauge className="h-6 w-6 text-white/80" />
                 </div>
                 <h3 className="text-lg font-semibold">Latency‑Aware</h3>
-                <p className="text-sm text-muted-foreground">
-                  Architecture built for low overhead and consistent behavior under heavy load.
-                </p>
+                <p className="text-sm text-muted-foreground">Architecture built for low overhead and consistent behavior under heavy load.</p>
               </CardContent>
             </Card>
             <Card className="glass-card border border-white/10">
@@ -409,9 +248,7 @@ export default async function HomePage() {
                   <Globe className="h-6 w-6 text-white/80" />
                 </div>
                 <h3 className="text-lg font-semibold">Broker Friendly</h3>
-                <p className="text-sm text-muted-foreground">
-                  Works across major brokers and liquidity conditions with configurable filters.
-                </p>
+                <p className="text-sm text-muted-foreground">Works across major brokers and liquidity conditions with configurable filters.</p>
               </CardContent>
             </Card>
             <Card className="glass-card border border-white/10">
@@ -420,9 +257,7 @@ export default async function HomePage() {
                   <Sparkles className="h-6 w-6 text-white/80" />
                 </div>
                 <h3 className="text-lg font-semibold">Updates for Life</h3>
-                <p className="text-sm text-muted-foreground">
-                  Ongoing improvements and refinements aligned with market structure changes.
-                </p>
+                <p className="text-sm text-muted-foreground">Ongoing improvements and refinements aligned with market structure changes.</p>
               </CardContent>
             </Card>
           </div>
@@ -434,27 +269,13 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold">Frequently Asked Questions</h2>
-            <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-              Short, honest answers so you can make an informed decision.
-            </p>
+            <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">Short, honest answers so you can make an informed decision.</p>
           </div>
           <div className="grid md:grid-cols-2 gap-6">
-            <FAQItem
-              q="Will these EAs work with my broker?"
-              a="Yes. Each EA exposes parameters for symbol, session windows, spread and slippage filters, and more."
-            />
-            <FAQItem
-              q="Do I get updates?"
-              a="Yes. Lifetime updates are included, and we periodically improve execution logic and risk tooling."
-            />
-            <FAQItem
-              q="How many accounts can I use?"
-              a="Licenses specify max accounts; you can upgrade or request additional seats from your dashboard."
-            />
-            <FAQItem
-              q="What about support?"
-              a="Fast support with clear guidance on parameterization, VPS setup, and broker nuances."
-            />
+            <FAQItem q="Will these EAs work with my broker?" a="Yes. Each EA exposes parameters for symbol, session windows, spread and slippage filters, and more." />
+            <FAQItem q="Do I get updates?" a="Yes. Lifetime updates are included, and we periodically improve execution logic and risk tooling." />
+            <FAQItem q="How many accounts can I use?" a="Licenses specify max accounts; you can upgrade or request additional seats from your dashboard." />
+            <FAQItem q="What about support?" a="Fast support with clear guidance on parameterization, VPS setup, and broker nuances." />
           </div>
         </div>
       </section>
@@ -462,7 +283,17 @@ export default async function HomePage() {
       {/* Newsletter */}
       <section className="py-20 border-t border-white/10">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <NewsletterPanel />
+          <Card className="glass-card border border-white/10">
+            <CardContent className="p-8 md:p-10">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div>
+                  <h3 className="text-2xl font-bold">Get Alpha Updates</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Strategy insights, performance notes, and new EA launches—no spam.</p>
+                </div>
+                <NewsletterForm />
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
@@ -473,15 +304,10 @@ export default async function HomePage() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="text-2xl" aria-hidden="true">📊</div>
-                <span className="text-lg font-bold">
-                  Mark<span className="neon-text">8</span>Pips
-                </span>
+                <span className="text-lg font-bold">Mark<span className="neon-text">8</span>Pips</span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Professional MT5 trading solutions inspired by modern, world‑class product design.
-              </p>
+              <p className="text-sm text-muted-foreground">Professional MT5 trading solutions inspired by modern, world‑class product design.</p>
             </div>
-
             <div>
               <h3 className="text-sm font-semibold mb-3">Products</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -490,7 +316,6 @@ export default async function HomePage() {
                 <li><Link href="/products?category=gold-trading" className="hover:text-white transition">Gold EAs</Link></li>
               </ul>
             </div>
-
             <div>
               <h3 className="text-sm font-semibold mb-3">Company</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -499,7 +324,6 @@ export default async function HomePage() {
                 <li><Link href="/auth/signin" className="hover:text-white transition">Sign In</Link></li>
               </ul>
             </div>
-
             <div>
               <h3 className="text-sm font-semibold mb-3">Support</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -508,10 +332,7 @@ export default async function HomePage() {
               </ul>
             </div>
           </div>
-
-          <div className="pt-6 border-t border-white/10 text-center text-xs text-muted-foreground">
-            © 2025 Mark8Pips. All rights reserved.
-          </div>
+          <div className="pt-6 border-t border-white/10 text-center text-xs text-muted-foreground">© 2025 Mark8Pips. All rights reserved.</div>
         </div>
       </footer>
     </div>
