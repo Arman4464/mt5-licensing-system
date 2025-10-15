@@ -1,12 +1,5 @@
 // src/app/page.tsx
-// Full homepage: Navigation, Hero, Stats, Feature Tiles, Featured Products, Categories,
-// Testimonials, Value Props, FAQ, Newsletter, Footer
-// Hardened for production:
-// - No "any" types
-// - Includes id in ea_categories select to satisfy Product typing
-// - Optional Category.id to remain resilient to schema/RLS differences
-// - Avoids external <Image> sources to prevent next.config image domain issues
-// - Uses only your existing globals.css utilities
+// Complete homepage with strict TypeScript - no "any" types allowed
 
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
@@ -33,9 +26,9 @@ import {
   Gauge,
 } from 'lucide-react'
 
-// Local types for this page
+// Strict types - no any allowed
 type Category = {
-  id?: string // optional to avoid strict failures if RLS omits id
+  id?: string
   name: string
   slug?: string | null
   icon?: string | null
@@ -51,7 +44,34 @@ type Product = {
   ea_categories?: Category | Category[] | null
 }
 
-// Decorative background blob (pure CSS)
+// Helper to safely normalize categories from Supabase
+function normalizeCategories(cats: unknown): Category | Category[] | null {
+  if (!cats) return null
+
+  if (Array.isArray(cats)) {
+    return cats.map((c: unknown) => {
+      const obj = c as Record<string, unknown>
+      return {
+        id: obj.id ? String(obj.id) : undefined,
+        name: String(obj.name ?? ''),
+        slug: typeof obj.slug === 'string' ? obj.slug : null,
+        icon: typeof obj.icon === 'string' ? obj.icon : null,
+        description: typeof obj.description === 'string' ? obj.description : null,
+      }
+    })
+  }
+
+  const obj = cats as Record<string, unknown>
+  return {
+    id: obj.id ? String(obj.id) : undefined,
+    name: String(obj.name ?? ''),
+    slug: typeof obj.slug === 'string' ? obj.slug : null,
+    icon: typeof obj.icon === 'string' ? obj.icon : null,
+    description: typeof obj.description === 'string' ? obj.description : null,
+  }
+}
+
+// Components
 function NeonBlob({ className }: { className?: string }) {
   return (
     <div
@@ -61,7 +81,6 @@ function NeonBlob({ className }: { className?: string }) {
   )
 }
 
-// Small stat chip
 function StatChip({ label, value }: { label: string; value: string }) {
   return (
     <div className="glass-card border border-white/10 rounded-xl p-6 text-center hover-lift">
@@ -71,7 +90,6 @@ function StatChip({ label, value }: { label: string; value: string }) {
   )
 }
 
-// Feature tile
 function FeatureTile({
   icon: Icon,
   title,
@@ -96,11 +114,10 @@ function FeatureTile({
   )
 }
 
-// Product card (featured)
 function FeaturedProductCard({ product }: { product: Product }) {
   const raw = product.ea_categories
   const category: Category | undefined =
-    Array.isArray(raw) ? (raw[0] as Category | undefined) : (raw ?? undefined)
+    Array.isArray(raw) ? raw[0] : raw || undefined
 
   return (
     <Link href={`/products/${product.id}`} className="block h-full">
@@ -139,7 +156,6 @@ function FeaturedProductCard({ product }: { product: Product }) {
   )
 }
 
-// Slim logo/brand rail (placeholder)
 function BrandRail() {
   return (
     <div className="mt-16">
@@ -160,7 +176,6 @@ function BrandRail() {
   )
 }
 
-// Category card
 function CategoryCard({
   icon,
   name,
@@ -187,7 +202,6 @@ function CategoryCard({
   )
 }
 
-// Testimonial card (no external image to avoid next.config changes)
 function TestimonialCard({
   quote,
   author,
@@ -200,7 +214,7 @@ function TestimonialCard({
   return (
     <Card className="glass-card border border-white/10 hover-lift h-full">
       <CardContent className="p-6 space-y-4">
-        <p className="text-sm leading-relaxed text-gray-200">“{quote}”</p>
+        <p className="text-sm leading-relaxed text-gray-200">"{quote}"</p>
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
             <span className="text-lg">👤</span>
@@ -215,7 +229,6 @@ function TestimonialCard({
   )
 }
 
-// FAQ item
 function FAQItem({ q, a }: { q: string; a: string }) {
   return (
     <details className="group glass-card border border-white/10 rounded-xl p-4 hover-lift">
@@ -230,7 +243,6 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   )
 }
 
-// Newsletter panel
 function NewsletterPanel() {
   return (
     <Card className="glass-card border border-white/10">
@@ -266,52 +278,26 @@ function NewsletterPanel() {
 export default async function HomePage() {
   const supabase = await createClient()
 
-  // Featured products — include id in nested select so Category typing is satisfied
+  // Featured products with strict typing
   const { data: featuredRaw, error: featuredErr } = await supabase
     .from('products')
     .select('id, name, description, price, platform, ea_categories(id, name, icon, slug, description)')
     .eq('is_featured', true)
     .limit(3)
 
-  // Map with guards; tolerate RLS by falling back to empty arrays
   const featuredProducts: Product[] =
     !featuredErr && Array.isArray(featuredRaw)
-      ? featuredRaw.map((p) => {
-          const cats = p.ea_categories
-          let normalizedCats: Category | Category[] | null = null
-
-          if (Array.isArray(cats)) {
-            normalizedCats = cats.map((c) => ({
-              id: c?.id ? String(c.id) : undefined,
-              name: String(c?.name ?? ''),
-              slug: c?.slug ?? null,
-              icon: c?.icon ?? null,
-              description: c?.description ?? null,
-            }))
-          } else if (cats && typeof cats === 'object') {
-            normalizedCats = {
-              id: (cats as any)?.id ? String((cats as any).id) : undefined,
-              name: String((cats as any)?.name ?? ''),
-              slug: (cats as any)?.slug ?? null,
-              icon: (cats as any)?.icon ?? null,
-              description: (cats as any)?.description ?? null,
-            }
-          } else {
-            normalizedCats = null
-          }
-
-          return {
-            id: String(p.id),
-            name: String(p.name ?? ''),
-            description: p.description ?? null,
-            price: Number(p.price ?? 0),
-            platform: String(p.platform ?? ''),
-            ea_categories: normalizedCats,
-          }
-        })
+      ? featuredRaw.map((p) => ({
+          id: String(p.id),
+          name: String(p.name ?? ''),
+          description: p.description ?? null,
+          price: Number(p.price ?? 0),
+          platform: String(p.platform ?? ''),
+          ea_categories: normalizeCategories(p.ea_categories),
+        }))
       : []
 
-  // Categories for browse section
+  // Categories with strict typing
   const { data: categoriesRaw, error: catErr } = await supabase
     .from('ea_categories')
     .select('id, name, slug, icon, description')
@@ -512,11 +498,11 @@ export default async function HomePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
               {categories.map((c) => (
                 <CategoryCard
-                  key={`${c.id ?? c.slug ?? c.name}`}
+                  key={c.id || c.slug || c.name}
                   icon={c.icon}
                   name={c.name}
                   description={c.description}
-                  href={`/products?category=${c.slug ?? c.id ?? encodeURIComponent(c.name)}`}
+                  href={`/products?category=${c.slug || c.id || encodeURIComponent(c.name)}`}
                 />
               ))}
             </div>
