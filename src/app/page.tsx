@@ -1,5 +1,5 @@
 // src/app/page.tsx
-// Complete homepage with strict TypeScript - no "any" types allowed
+// Strict, production-safe homepage. No "any", no unescaped quotes, no unused imports.
 
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
@@ -26,7 +26,7 @@ import {
   Gauge,
 } from 'lucide-react'
 
-// Strict types - no any allowed
+// Local types
 type Category = {
   id?: string
   name: string
@@ -44,7 +44,7 @@ type Product = {
   ea_categories?: Category | Category[] | null
 }
 
-// Helper to safely normalize categories from Supabase
+// Helpers
 function normalizeCategories(cats: unknown): Category | Category[] | null {
   if (!cats) return null
 
@@ -71,7 +71,6 @@ function normalizeCategories(cats: unknown): Category | Category[] | null {
   }
 }
 
-// Components
 function NeonBlob({ className }: { className?: string }) {
   return (
     <div
@@ -116,8 +115,7 @@ function FeatureTile({
 
 function FeaturedProductCard({ product }: { product: Product }) {
   const raw = product.ea_categories
-  const category: Category | undefined =
-    Array.isArray(raw) ? raw[0] : raw || undefined
+  const category: Category | undefined = Array.isArray(raw) ? raw[0] : raw || undefined
 
   return (
     <Link href={`/products/${product.id}`} className="block h-full">
@@ -193,9 +191,7 @@ function CategoryCard({
         <CardContent className="p-6 text-center flex flex-col items-center gap-2">
           <div className="text-5xl leading-none">{icon || '📁'}</div>
           <h3 className="mt-2 text-base font-semibold">{name}</h3>
-          <p className="text-xs text-muted-foreground">
-            {description || 'Well‑tuned strategies'}
-          </p>
+          <p className="text-xs text-muted-foreground">{description || 'Well‑tuned strategies'}</p>
         </CardContent>
       </Card>
     </Link>
@@ -214,7 +210,7 @@ function TestimonialCard({
   return (
     <Card className="glass-card border border-white/10 hover-lift h-full">
       <CardContent className="p-6 space-y-4">
-        <p className="text-sm leading-relaxed text-gray-200">"{quote}"</p>
+        <p className="text-sm leading-relaxed text-gray-200">&quot;{quote}&quot;</p>
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
             <span className="text-lg">👤</span>
@@ -278,10 +274,12 @@ function NewsletterPanel() {
 export default async function HomePage() {
   const supabase = await createClient()
 
-  // Featured products with strict typing
+  // Featured products
   const { data: featuredRaw, error: featuredErr } = await supabase
     .from('products')
-    .select('id, name, description, price, platform, ea_categories(id, name, icon, slug, description)')
+    .select(
+      'id, name, description, price, platform, ea_categories(id, name, icon, slug, description)'
+    )
     .eq('is_featured', true)
     .limit(3)
 
@@ -297,7 +295,7 @@ export default async function HomePage() {
         }))
       : []
 
-  // Categories with strict typing
+  // Categories
   const { data: categoriesRaw, error: catErr } = await supabase
     .from('ea_categories')
     .select('id, name, slug, icon, description')
@@ -370,7 +368,7 @@ export default async function HomePage() {
             </h1>
 
             <p className="mt-5 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-              Premium EAs for MT4 & MT5, engineered for speed, stability, and risk control—backed by rigorous backtests and real performance.
+              Premium EAs for MT4 &amp; MT5, engineered for speed, stability, and risk control—backed by rigorous backtests and real performance.
             </p>
 
             <div className="mt-8 flex items-center justify-center gap-4">
@@ -412,7 +410,7 @@ export default async function HomePage() {
             <FeatureTile
               icon={Zap}
               title="Lightning Fast"
-              desc="Ultra‑optimized execution & minimal latency to ensure entries and exits are never missed."
+              desc="Ultra‑optimized execution &amp; minimal latency to ensure entries and exits are never missed."
               accentClass="bg-blue-500/15 text-blue-400"
             />
             <FeatureTile
@@ -424,7 +422,7 @@ export default async function HomePage() {
             <FeatureTile
               icon={TrendingUp}
               title="Proven Results"
-              desc="Backtested strategies with robust metrics, validated on multiple symbols & regimes."
+              desc="Backtested strategies with robust metrics, validated on multiple symbols &amp; regimes."
               accentClass="bg-lime-400/15 text-lime-300"
             />
           </div>
@@ -439,7 +437,7 @@ export default async function HomePage() {
             <FeatureTile
               icon={LineChart}
               title="Analytics Ready"
-              desc="Transparent performance reporting & exportable logs for your analysis workflow."
+              desc="Transparent performance reporting &amp; exportable logs for your analysis workflow."
               accentClass="bg-sky-500/15 text-sky-400"
             />
             <FeatureTile
@@ -523,7 +521,7 @@ export default async function HomePage() {
             <TestimonialCard
               quote="Execution is razor sharp, and the built‑in risk limits saved my month during a volatile spike."
               author="Rajesh P."
-              role="Gold & Indices"
+              role="Gold &amp; Indices"
             />
             <TestimonialCard
               quote="Setup took minutes. Support clarified session filters and my scalper started printing."
