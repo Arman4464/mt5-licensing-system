@@ -1,14 +1,7 @@
 // src/app/page.tsx
-// Full homepage: Navigation, Hero, Stats, Feature Tiles, Featured Products, Categories,
-// Testimonials, Value Props, FAQ, Newsletter, Footer
-// Notes:
-// - No "any" types are used (fixes @typescript-eslint/no-explicit-any).
-// - Next/Image is used instead of <img> to satisfy @next/next/no-img-element.
-// - Uses your existing utilities from globals.css: glass-card, gradient-bg, gradient-text,
-//   button-shine, neon-text, hover-lift, page-transition.
+// Hardened production-safe homepage with explicit guards for Supabase + RSC
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { createClient } from '@/utils/supabase/server'
 import { Button } from '@/components/ui/button'
 import {
@@ -34,7 +27,7 @@ import {
   UserCheck,
 } from 'lucide-react'
 
-// Minimal data types to avoid any
+// Types
 type Category = {
   id: string
   name: string
@@ -49,10 +42,10 @@ type Product = {
   description?: string | null
   price: number
   platform: string
-  ea_categories?: Category | Category[]
+  ea_categories?: Category | Category[] | null
 }
 
-// Decorative background blob (pure CSS)
+// Helpers
 function NeonBlob({ className }: { className?: string }) {
   return (
     <div
@@ -62,7 +55,6 @@ function NeonBlob({ className }: { className?: string }) {
   )
 }
 
-// Small stat chip
 function StatChip({ label, value }: { label: string; value: string }) {
   return (
     <div className="glass-card border border-white/10 rounded-xl p-6 text-center hover-lift">
@@ -72,7 +64,6 @@ function StatChip({ label, value }: { label: string; value: string }) {
   )
 }
 
-// Feature tile
 function FeatureTile({
   icon: Icon,
   title,
@@ -97,12 +88,10 @@ function FeatureTile({
   )
 }
 
-// Product card (featured)
 function FeaturedProductCard({ product }: { product: Product }) {
   const raw = product.ea_categories
-  const category: Category | undefined = Array.isArray(raw)
-    ? raw[0]
-    : raw || undefined
+  const category: Category | undefined =
+    Array.isArray(raw) ? (raw[0] as Category | undefined) : (raw ?? undefined)
 
   return (
     <Link href={`/products/${product.id}`} className="block h-full">
@@ -126,10 +115,10 @@ function FeaturedProductCard({ product }: { product: Product }) {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground line-clamp-3">
-            {String(product.description || '')}
+            {String(product.description ?? '')}
           </p>
           <div className="flex items-center justify-between">
-            <p className="text-2xl font-extrabold neon-text">₹{product.price}</p>
+            <p className="text-2xl font-extrabold neon-text">₹{Number(product.price ?? 0)}</p>
             <Button size="sm" className="bg-gradient-neon text-black button-shine">
               View Details
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -141,7 +130,6 @@ function FeaturedProductCard({ product }: { product: Product }) {
   )
 }
 
-// Slim logo/brand rail (placeholder)
 function BrandRail() {
   return (
     <div className="mt-16">
@@ -162,7 +150,6 @@ function BrandRail() {
   )
 }
 
-// Category card
 function CategoryCard({
   icon,
   name,
@@ -189,35 +176,22 @@ function CategoryCard({
   )
 }
 
-// Testimonial card (uses Next/Image for lint)
 function TestimonialCard({
   quote,
   author,
   role,
-  avatar,
 }: {
   quote: string
   author: string
   role?: string
-  avatar?: string
 }) {
   return (
     <Card className="glass-card border border-white/10 hover-lift h-full">
       <CardContent className="p-6 space-y-4">
         <p className="text-sm leading-relaxed text-gray-200">“{quote}”</p>
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-white/10 overflow-hidden relative">
-            {avatar ? (
-              <Image
-                src={avatar}
-                alt={author}
-                fill
-                className="object-cover"
-                sizes="40px"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-lg">👤</div>
-            )}
+          <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
+            <span className="text-lg">👤</span>
           </div>
           <div>
             <div className="text-sm font-medium">{author}</div>
@@ -229,7 +203,6 @@ function TestimonialCard({
   )
 }
 
-// Simple FAQ item
 function FAQItem({ q, a }: { q: string; a: string }) {
   return (
     <details className="group glass-card border border-white/10 rounded-xl p-4 hover-lift">
@@ -244,7 +217,6 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   )
 }
 
-// Newsletter panel
 function NewsletterPanel() {
   return (
     <Card className="glass-card border border-white/10">
@@ -256,7 +228,11 @@ function NewsletterPanel() {
               Strategy insights, performance notes, and new EA launches—no spam.
             </p>
           </div>
-          <form className="w-full md:w-auto flex items-center gap-3" action="#" onSubmit={(e) => e.preventDefault()}>
+          <form
+            className="w-full md:w-auto flex items-center gap-3"
+            action="#"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <input
               type="email"
               required
@@ -276,39 +252,42 @@ function NewsletterPanel() {
 export default async function HomePage() {
   const supabase = await createClient()
 
-  // Featured products
-  const { data: featuredProductsRaw } = await supabase
+  // Query featured products
+  const { data: featuredRaw, error: featuredErr } = await supabase
     .from('products')
-    .select('*, ea_categories(name, icon)')
+    .select('id, name, description, price, platform, ea_categories(name, icon)')
     .eq('is_featured', true)
     .limit(3)
 
-  const featuredProducts: Product[] = Array.isArray(featuredProductsRaw)
-    ? featuredProductsRaw.map((p) => ({
-        id: String(p.id),
-        name: String(p.name),
-        description: p.description ?? null,
-        price: Number(p.price ?? 0),
-        platform: String(p.platform ?? ''),
-        ea_categories: p.ea_categories as Product['ea_categories'],
-      }))
-    : []
+  // If RLS or select fails, use empty list to keep RSC stable
+  const featuredProducts: Product[] =
+    !featuredErr && Array.isArray(featuredRaw)
+      ? featuredRaw.map((p) => ({
+          id: String(p.id),
+          name: String(p.name ?? ''),
+          description: p.description ?? null,
+          price: Number(p.price ?? 0),
+          platform: String(p.platform ?? ''),
+          ea_categories: p.ea_categories ?? null,
+        }))
+      : []
 
-  // Categories
-  const { data: categoriesRaw } = await supabase
+  // Query categories
+  const { data: categoriesRaw, error: catErr } = await supabase
     .from('ea_categories')
-    .select('*')
+    .select('id, name, slug, icon, description')
     .order('name', { ascending: true })
 
-  const categories: Category[] = Array.isArray(categoriesRaw)
-    ? categoriesRaw.map((c) => ({
-        id: String(c.id),
-        name: String(c.name),
-        slug: c.slug ?? null,
-        icon: c.icon ?? null,
-        description: c.description ?? null,
-      }))
-    : []
+  const categories: Category[] =
+    !catErr && Array.isArray(categoriesRaw)
+      ? categoriesRaw.map((c) => ({
+          id: String(c.id),
+          name: String(c.name ?? ''),
+          slug: c.slug ?? null,
+          icon: c.icon ?? null,
+          description: c.description ?? null,
+        }))
+      : []
 
   return (
     <div className="relative min-h-screen gradient-bg text-white overflow-clip">
@@ -320,20 +299,31 @@ export default async function HomePage() {
       <header className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur">
         <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="text-2xl" aria-hidden="true">📊</div>
+            <div className="text-2xl" aria-hidden="true">
+              📊
+            </div>
             <span className="text-lg font-bold">
               Mark<span className="neon-text">8</span>Pips
             </span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            <Link href="/products" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">
+            <Link
+              href="/products"
+              className="text-sm font-medium text-muted-foreground hover:text-white transition-colors"
+            >
               Products
             </Link>
-            <Link href="/about" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">
+            <Link
+              href="/about"
+              className="text-sm font-medium text-muted-foreground hover:text-white transition-colors"
+            >
               About
             </Link>
-            <Link href="/contact" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">
+            <Link
+              href="/contact"
+              className="text-sm font-medium text-muted-foreground hover:text-white transition-colors"
+            >
               Contact
             </Link>
           </div>
@@ -366,7 +356,8 @@ export default async function HomePage() {
             </h1>
 
             <p className="mt-5 text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-              Premium EAs for MT4 & MT5, engineered for speed, stability, and risk control—backed by rigorous backtests and real performance.
+              Premium EAs for MT4 & MT5, engineered for speed, stability, and risk control—backed
+              by rigorous backtests and real performance.
             </p>
 
             <div className="mt-8 flex items-center justify-center gap-4">
@@ -389,7 +380,6 @@ export default async function HomePage() {
               <StatChip label="Support" value="24/7" />
             </div>
 
-            {/* Brand rail */}
             <BrandRail />
           </div>
         </div>
@@ -426,7 +416,6 @@ export default async function HomePage() {
             />
           </div>
 
-          {/* Secondary row */}
           <div className="grid md:grid-cols-3 gap-6 mt-6">
             <FeatureTile
               icon={Cpu}
@@ -466,8 +455,8 @@ export default async function HomePage() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              {featuredProducts.map((product) => (
-                <FeaturedProductCard key={product.id} product={product} />
+              {featuredProducts.map((p) => (
+                <FeaturedProductCard key={p.id} product={p} />
               ))}
             </div>
 
@@ -621,7 +610,9 @@ export default async function HomePage() {
           <div className="grid md:grid-cols-4 gap-8 mb-10">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="text-2xl" aria-hidden="true">📊</div>
+                <div className="text-2xl" aria-hidden="true">
+                  📊
+                </div>
                 <span className="text-lg font-bold">
                   Mark<span className="neon-text">8</span>Pips
                 </span>
@@ -634,26 +625,58 @@ export default async function HomePage() {
             <div>
               <h3 className="text-sm font-semibold mb-3">Products</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/products" className="hover:text-white transition">All EAs</Link></li>
-                <li><Link href="/products?category=mt5-scalpers" className="hover:text-white transition">Scalpers</Link></li>
-                <li><Link href="/products?category=gold-trading" className="hover:text-white transition">Gold EAs</Link></li>
+                <li>
+                  <Link href="/products" className="hover:text-white transition">
+                    All EAs
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/products?category=mt5-scalpers" className="hover:text-white transition">
+                    Scalpers
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/products?category=gold-trading" className="hover:text-white transition">
+                    Gold EAs
+                  </Link>
+                </li>
               </ul>
             </div>
 
             <div>
               <h3 className="text-sm font-semibold mb-3">Company</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/about" className="hover:text-white transition">About</Link></li>
-                <li><Link href="/contact" className="hover:text-white transition">Contact</Link></li>
-                <li><Link href="/auth/signin" className="hover:text-white transition">Sign In</Link></li>
+                <li>
+                  <Link href="/about" className="hover:text-white transition">
+                    About
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="hover:text-white transition">
+                    Contact
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/auth/signin" className="hover:text-white transition">
+                    Sign In
+                  </Link>
+                </li>
               </ul>
             </div>
 
             <div>
               <h3 className="text-sm font-semibold mb-3">Support</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/contact" className="hover:text-white transition">Help Center</Link></li>
-                <li><Link href="/dashboard" className="hover:text-white transition">My Licenses</Link></li>
+                <li>
+                  <Link href="/contact" className="hover:text-white transition">
+                    Help Center
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/dashboard" className="hover:text-white transition">
+                    My Licenses
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
