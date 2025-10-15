@@ -1,5 +1,4 @@
 // src/app/page.tsx
-// Force dynamic rendering to avoid static build errors with Supabase cookies
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
@@ -24,7 +23,6 @@ import {
   Layers,
   Gauge,
 } from 'lucide-react'
-import { NewsletterForm } from '@/components/newsletter-form'
 
 function NeonBlob({ className }: { className?: string }) {
   return (
@@ -277,23 +275,6 @@ export default function HomePage() {
             <FAQItem q="How many accounts can I use?" a="Licenses specify max accounts; you can upgrade or request additional seats from your dashboard." />
             <FAQItem q="What about support?" a="Fast support with clear guidance on parameterization, VPS setup, and broker nuances." />
           </div>
-        </div>
-      </section>
-
-      {/* Newsletter */}
-      <section className="py-20 border-t border-white/10">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <Card className="glass-card border border-white/10">
-            <CardContent className="p-8 md:p-10">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                <div>
-                  <h3 className="text-2xl font-bold">Get Alpha Updates</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Strategy insights, performance notes, and new EA launches—no spam.</p>
-                </div>
-                <NewsletterForm />
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </section>
 
